@@ -3,52 +3,60 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SliceFlow</title>
+  <title>SliceFlow - Cashier</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
 </head>
-<body class="bg-orange-50 min-h-screen p-8">
-  <div class="max-w-3xl mx-auto">
+<body class="bg-orange-50 min-h-screen">
 
-    <div class="bg-white rounded-2xl shadow p-8 text-center mb-6">
-      <h1 class="text-4xl font-bold text-orange-600 mb-4">SliceFlow</h1>
-      <p id="count" class="text-xl mb-6">Orders in database: {{ count }}</p>
-      <button hx-post="/order" hx-target="#count"
-              class="bg-orange-600 text-white text-xl px-8 py-4 rounded-xl active:scale-95">
-        Order a pizza
-      </button>
-    </div>
+  <header class="bg-white shadow px-6 py-4 flex items-center justify-between">
+    <h1 class="text-3xl font-bold text-orange-600">SliceFlow</h1>
+    <span class="text-gray-500">Cashier</span>
+  </header>
 
-    <div class="bg-white rounded-2xl shadow p-6 mb-6">
-      <h2 class="text-2xl font-semibold mb-4">Toppings</h2>
-      <div class="flex flex-wrap gap-2">
-        {% for t in toppings %}
-          <span class="bg-orange-100 text-orange-800 px-3 py-2 rounded-full">{{ t.name }}</span>
-        {% endfor %}
+  <main class="grid grid-cols-3 gap-6 p-6">
+
+    <!-- LEFT: menu buttons (2 of 3 columns) -->
+    <section class="col-span-2 space-y-6">
+
+      <div class="bg-white rounded-2xl shadow p-6">
+        <h2 class="text-2xl font-semibold mb-2">Pizza</h2>
+        <p class="text-gray-500">Visual pizza builder comes on Day 6.</p>
       </div>
-    </div>
 
-    <div class="grid grid-cols-2 gap-6">
       <div class="bg-white rounded-2xl shadow p-6">
         <h2 class="text-2xl font-semibold mb-4">Sides</h2>
-        {% for item in sides %}
-          <div class="flex justify-between py-2 border-b">
-            <span>{{ item.name }}</span>
-            <span class="font-semibold">{{ item.price_cents | money }}</span>
-          </div>
-        {% endfor %}
+        <div class="grid grid-cols-2 gap-3">
+          {% for item in sides %}
+            <button hx-post="/cart/add/{{ item.id }}" hx-target="#ticket" hx-swap="outerHTML"
+                    class="min-h-16 bg-orange-100 hover:bg-orange-200 active:scale-95 rounded-xl px-4 py-3 text-left">
+              <div class="text-lg font-semibold text-orange-900">{{ item.name }}</div>
+              <div class="text-orange-700">{{ item.price_cents | money }}</div>
+            </button>
+          {% endfor %}
+        </div>
       </div>
+
       <div class="bg-white rounded-2xl shadow p-6">
         <h2 class="text-2xl font-semibold mb-4">Drinks</h2>
-        {% for item in drinks %}
-          <div class="flex justify-between py-2 border-b">
-            <span>{{ item.name }}</span>
-            <span class="font-semibold">{{ item.price_cents | money }}</span>
-          </div>
-        {% endfor %}
+        <div class="grid grid-cols-2 gap-3">
+          {% for item in drinks %}
+            <button hx-post="/cart/add/{{ item.id }}" hx-target="#ticket" hx-swap="outerHTML"
+                    class="min-h-16 bg-sky-100 hover:bg-sky-200 active:scale-95 rounded-xl px-4 py-3 text-left">
+              <div class="text-lg font-semibold text-sky-900">{{ item.name }}</div>
+              <div class="text-sky-700">{{ item.price_cents | money }}</div>
+            </button>
+          {% endfor %}
+        </div>
       </div>
-    </div>
 
-  </div>
+    </section>
+
+    <!-- RIGHT: the order ticket (1 of 3 columns) -->
+    <aside>
+      {% include "partials/ticket.html" %}
+    </aside>
+
+  </main>
 </body>
 </html>

@@ -1,0 +1,34 @@
+<div id="ticket" class="bg-white rounded-2xl shadow p-6 sticky top-6">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-2xl font-semibold">Order #{{ order.id }}</h2>
+    <button hx-post="/cart/clear" hx-target="#ticket" hx-swap="outerHTML"
+            class="text-sm text-red-600 hover:underline">Clear</button>
+  </div>
+
+  {% if lines %}
+    <ul class="divide-y mb-4">
+      {% for line in lines %}
+        <li class="flex items-center justify-between py-3">
+          <div>
+            <div class="font-semibold">{{ line.name }}</div>
+            <div class="text-sm text-gray-500">{{ line.quantity }} x {{ line.unit_price_cents | money }}</div>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="font-semibold">{{ (line.unit_price_cents * line.quantity) | money }}</span>
+            <button hx-post="/cart/remove/{{ line.id }}" hx-target="#ticket" hx-swap="outerHTML"
+                    class="w-12 h-12 rounded-full bg-gray-100 hover:bg-gray-200 text-2xl"
+                    aria-label="Remove one {{ line.name }}">-</button>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="text-gray-400 py-8 text-center">Tap an item to start the order</p>
+  {% endif %}
+
+  <div class="space-y-1 border-t pt-4">
+    <div class="flex justify-between"><span>Subtotal</span><span>{{ subtotal | money }}</span></div>
+    <div class="flex justify-between"><span>Tax (6%)</span><span>{{ tax | money }}</span></div>
+    <div class="flex justify-between text-2xl font-bold pt-2"><span>Total</span><span>{{ total | money }}</span></div>
+  </div>
+</div>
