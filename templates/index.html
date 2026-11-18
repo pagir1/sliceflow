@@ -16,12 +16,67 @@
 
   <main class="grid grid-cols-3 gap-6 p-6">
 
-    <!-- LEFT: menu buttons (2 of 3 columns) -->
+    <!-- LEFT: menu (2 of 3 columns) -->
     <section class="col-span-2 space-y-6">
 
+      <!-- PIZZA BUILDER -->
       <div class="bg-white rounded-2xl shadow p-6">
-        <h2 class="text-2xl font-semibold mb-2">Pizza</h2>
-        <p class="text-gray-500">Visual pizza builder comes on Day 6.</p>
+        <h2 class="text-2xl font-semibold mb-4">Build a pizza</h2>
+
+        <form id="builder" hx-post="/pizza/preview" hx-trigger="change"
+              hx-target="#pizza-preview" hx-swap="outerHTML"
+              class="grid grid-cols-2 gap-6">
+
+          <!-- Left side of the builder: the picture, price and Add button -->
+          <div class="flex flex-col items-center gap-4">
+            {% include "partials/pizza_preview.html" %}
+            <button type="button"
+                    hx-post="/cart/add-pizza" hx-target="#ticket" hx-swap="outerHTML"
+                    hx-on::after-request="this.form.reset(); htmx.trigger(this.form, 'change')"
+                    class="w-full min-h-16 bg-orange-600 hover:bg-orange-700 active:scale-95 text-white text-xl font-semibold rounded-xl">
+              Add pizza to order
+            </button>
+          </div>
+
+          <!-- Right side of the builder: size and toppings -->
+          <div>
+            <div class="font-semibold mb-2">Size</div>
+            <div class="grid grid-cols-3 gap-2 mb-5">
+              {% for code, name, price in sizes %}
+                <label class="cursor-pointer">
+                  <input type="radio" name="size" value="{{ code }}" class="sr-only peer"
+                         {% if code == "L" %}checked{% endif %}>
+                  <div class="min-h-14 rounded-xl border-2 border-gray-200 text-center py-2
+                              peer-checked:border-orange-600 peer-checked:bg-orange-50">
+                    <div class="font-semibold">{{ name }}</div>
+                    <div class="text-sm text-gray-500">{{ price | money }}</div>
+                  </div>
+                </label>
+              {% endfor %}
+            </div>
+
+            <div class="font-semibold mb-2">Toppings</div>
+            <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
+              {% for t in toppings %}
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-sm">{{ t.name }}</span>
+                  <div class="flex gap-1">
+                    {% for value, label in [("LEFT", "L"), ("WHOLE", "Whole"), ("RIGHT", "R"), ("NONE", "None")] %}
+                      <label class="cursor-pointer">
+                        <input type="radio" name="t_{{ t.id }}" value="{{ value }}" class="sr-only peer"
+                               {% if value == "NONE" %}checked{% endif %}>
+                        <span class="inline-flex items-center justify-center min-w-11 h-11 px-2 rounded-lg
+                                     bg-gray-100 text-sm
+                                     peer-checked:bg-orange-600 peer-checked:text-white">{{ label }}</span>
+                      </label>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+        </form>
       </div>
 
       <div class="bg-white rounded-2xl shadow p-6">

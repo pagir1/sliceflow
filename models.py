@@ -31,5 +31,6 @@ class OrderLine(SQLModel, table=True):
     order_id: int = Field(foreign_key="order.id")
     menu_item_id: int | None = Field(default=None, foreign_key="menuitem.id")
     name: str               # copied when added (INV-8)
+    details: str = ""       # pizza toppings, for example "Pepperoni (Left half)"
     unit_price_cents: int   # copied when added (INV-8)
     quantity: int = 1

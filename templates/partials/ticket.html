@@ -8,12 +8,15 @@
   {% if lines %}
     <ul class="divide-y mb-4">
       {% for line in lines %}
-        <li class="flex items-center justify-between py-3">
+        <li class="flex items-center justify-between py-3 gap-3">
           <div>
             <div class="font-semibold">{{ line.name }}</div>
+            {% if line.details %}
+              <div class="text-sm text-gray-600">{{ line.details }}</div>
+            {% endif %}
             <div class="text-sm text-gray-500">{{ line.quantity }} x {{ line.unit_price_cents | money }}</div>
           </div>
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-3 shrink-0">
             <span class="font-semibold">{{ (line.unit_price_cents * line.quantity) | money }}</span>
             <button hx-post="/cart/remove/{{ line.id }}" hx-target="#ticket" hx-swap="outerHTML"
                     class="w-12 h-12 rounded-full bg-gray-100 hover:bg-gray-200 text-2xl"

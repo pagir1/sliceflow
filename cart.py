@@ -1,7 +1,8 @@
 from sqlmodel import Session, select
 
-from core.pricing import order_totals
+from core.pricing import order_totals, pizza_price
 from models import Order, OrderLine, MenuItem
+from pizza import SIZE_NAMES, describe
 
 
 def get_or_create_draft(session: Session) -> Order:
@@ -36,6 +37,17 @@ def add_menu_item(session: Session, order: Order, item_id: int) -> None:
     else:
         line = OrderLine(order_id=order.id, menu_item_id=item.id,
                          name=item.name, unit_price_cents=item.price_cents)
+    session.add(line)
+    session.commit()
+
+
+def add_pizza(session: Session, order: Order, size: str,
+              selections: list[tuple[str, str]]) -> None:
+    if size not in SIZE_NAMES:
+        raise ValueError(f"Unknown size: {size}")
+    price = pizza_price(size, selections)   # raises ValueError if a side is wrong
+    line = OrderLine(order_id=order.id, name=f"{SIZE_NAMES[size]} Pizza",
+                     details=describe(selections), unit_price_cents=price)
     session.add(line)
     session.commit()
 

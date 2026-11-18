@@ -1,0 +1,32 @@
+<div id="pizza-preview" class="flex flex-col items-center">
+  <svg viewBox="0 0 240 240" class="w-64 h-64" role="img"
+       aria-label="{{ pizza.size_name }} pizza: {{ pizza.summary }}">
+    <circle cx="120" cy="120" r="112" fill="#e7b46a"/>
+    <circle cx="120" cy="120" r="96" fill="#d9472b"/>
+    <circle cx="120" cy="120" r="90" fill="#f7d774"/>
+    <line x1="120" y1="28" x2="120" y2="212" stroke="#e7b46a" stroke-width="3" stroke-dasharray="6 5"/>
+    {% for d in pizza.dots %}
+      <circle cx="{{ d.x }}" cy="{{ d.y }}" r="9" fill="{{ d.color }}" stroke="white" stroke-width="1.5"/>
+    {% endfor %}
+  </svg>
+
+  <div class="flex w-64 justify-between text-xs text-gray-500 -mt-1 mb-3">
+    <span>Left</span><span>Right</span>
+  </div>
+
+  <div class="text-center mb-2">
+    <div class="text-lg font-semibold">{{ pizza.size_name }} Pizza</div>
+    <div class="text-4xl font-bold text-orange-600">{{ pizza.price | money }}</div>
+  </div>
+
+  <div class="flex flex-wrap justify-center gap-2 min-h-8">
+    {% for name, side, color in pizza.chosen %}
+      <span class="flex items-center gap-1 text-sm bg-gray-100 rounded-full px-3 py-1">
+        <span class="inline-block w-3 h-3 rounded-full" style="background: {{ color }}"></span>
+        {{ name }}: {{ side }}
+      </span>
+    {% else %}
+      <span class="text-sm text-gray-400">Cheese only. Tap a topping side to add it.</span>
+    {% endfor %}
+  </div>
+</div>
