@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SliceFlow - Order status</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <style>
+    @keyframes pop {
+      0%   { transform: scale(0.6); }
+      60%  { transform: scale(1.15); }
+      100% { transform: scale(1); }
+    }
+    .pop { animation: pop 0.6s ease-out; }
+  </style>
+</head>
+<body class="bg-gray-950 text-white min-h-screen">
+
+  <header class="px-10 py-6 flex items-center justify-between">
+    <h1 class="text-4xl font-bold text-orange-500">SliceFlow</h1>
+    <button id="sound-btn" onclick="enableSound()"
+            class="px-5 py-3 rounded-xl bg-gray-800 hover:bg-gray-700 text-lg">
+      Tap to turn on sound
+    </button>
+  </header>
+
+  {% include "partials/board_live.html" %}
+
+  <footer class="px-10 pb-8 text-gray-500 text-xl">
+    Watch for your order number. When it turns green, come to the counter.
+  </footer>
+
+  <script>
+    let lastReady = null;     // order numbers that were ready last time
+    let audioCtx = null;      // browsers only allow sound after a tap
+
+    function enableSound() {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      document.getElementById("sound-btn").textContent = "Sound on";
+      chime();
+    }
+
+    function chime() {
+      if (!audioCtx) return;
+      const start = audioCtx.currentTime;
+      [880, 1320].forEach((freq, i) => {          // two notes: "ding-dong"
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        const t = start + i * 0.2;
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.3, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(t);
+        osc.stop(t + 0.65);
+      });
+    }
+
+    function checkReady() {
+      const live = document.getElementById("live");
+      if (!live) return;
+      const now = (live.dataset.ready || "").split(",").filter(Boolean);
+      if (lastReady !== null) {
+        const fresh = now.filter(id => !lastReady.includes(id));
+        if (fresh.length > 0) {
+          chime();
+          fresh.forEach(id => document.getElementById("ready-" + id)?.classList.add("pop"));
+        }
+      }
+      lastReady = now;
+    }
+
+    document.addEventListener("DOMContentLoaded", checkReady);
+    document.addEventListener("htmx:afterSwap", checkReady);
+  </script>
+</body>
+</html>

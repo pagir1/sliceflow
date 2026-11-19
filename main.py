@@ -5,6 +5,7 @@ from sqlmodel import Session, select
 
 import cart
 import checkout
+import display
 import kitchen
 import pizza
 from core.order_state import Event, Role, TransitionError
@@ -215,3 +216,16 @@ def pickup_hand_over(order_id: int, request: Request, session: Session = Depends
     except (ValueError, TransitionError) as e:
         return render_pickup(request, session, error=str(e))
     return render_pickup(request, session, message=f"Order #{order_id} handed over. Enjoy!")
+
+
+# ---------------- Customer board (TV) ----------------
+
+@app.get("/board", response_class=HTMLResponse)
+def customer_board_screen(request: Request, session: Session = Depends(get_session)):
+    return templates.TemplateResponse(request, "board.html", display.customer_board(session))
+
+
+@app.get("/board/live", response_class=HTMLResponse)
+def customer_board_live(request: Request, session: Session = Depends(get_session)):
+    return templates.TemplateResponse(request, "partials/board_live.html",
+                                      display.customer_board(session))

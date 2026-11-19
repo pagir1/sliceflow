@@ -1,0 +1,32 @@
+<main id="live" hx-get="/board/live" hx-trigger="every 3s" hx-swap="outerHTML"
+      data-ready="{{ ready | join(',') }}"
+      class="grid grid-cols-2 gap-10 px-10 py-6">
+
+  <section>
+    <h2 class="text-4xl font-semibold mb-6 text-amber-300">Preparing</h2>
+    <div class="grid grid-cols-3 gap-5">
+      {% for number in preparing %}
+        <div class="rounded-3xl bg-amber-900/60 text-amber-100 text-center py-8 text-7xl font-bold">
+          {{ number }}
+        </div>
+      {% else %}
+        <p class="text-gray-500 text-2xl col-span-3">No orders in the kitchen</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section>
+    <h2 class="text-4xl font-semibold mb-6 text-green-400">Ready, come get it</h2>
+    <div class="grid grid-cols-3 gap-5">
+      {% for number in ready %}
+        <div id="ready-{{ number }}"
+             class="rounded-3xl bg-green-600 text-white text-center py-8 text-7xl font-bold">
+          {{ number }}
+        </div>
+      {% else %}
+        <p class="text-gray-500 text-2xl col-span-3">Nothing ready yet</p>
+      {% endfor %}
+    </div>
+  </section>
+
+</main>
