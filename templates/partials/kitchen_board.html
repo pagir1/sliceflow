@@ -1,0 +1,61 @@
+<div id="board" hx-get="/kitchen/board" hx-trigger="every 3s" hx-swap="outerHTML" class="p-6">
+
+  {% if error %}
+    <div class="mb-4 rounded-xl bg-red-900 text-red-100 px-4 py-3">{{ error }}</div>
+  {% endif %}
+
+  <div class="grid grid-cols-3 gap-6">
+    {% for col in columns %}
+      <section>
+        <h2 class="text-2xl font-semibold mb-4 flex items-center gap-3">
+          {{ col.title }}
+          <span class="text-base bg-gray-700 rounded-full px-3">{{ col.cards | length }}</span>
+        </h2>
+
+        <div class="space-y-4">
+          {% for c in col.cards %}
+            <article class="rounded-2xl p-5 border-4
+                            {% if c.level == 'late' %}border-red-500 bg-red-950
+                            {% elif c.level == 'warn' %}border-amber-400 bg-amber-950
+                            {% else %}border-gray-700 bg-gray-800{% endif %}">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-4xl font-bold">#{{ c.order.id }}</span>
+                <span class="text-xl font-semibold
+                             {% if c.level == 'late' %}text-red-300 animate-pulse
+                             {% elif c.level == 'warn' %}text-amber-300
+                             {% else %}text-gray-300{% endif %}">{{ c.minutes }} min</span>
+              </div>
+
+              <ul class="space-y-2 mb-4">
+                {% for line in c.lines %}
+                  <li>
+                    <div class="text-lg font-semibold">{{ line.quantity }} x {{ line.name }}</div>
+                    {% if line.details %}
+                      <div class="text-gray-300">{{ line.details }}</div>
+                    {% endif %}
+                  </li>
+                {% endfor %}
+              </ul>
+
+              {% if col.state == "SUBMITTED" %}
+                <button hx-post="/kitchen/{{ c.order.id }}/start" hx-target="#board" hx-swap="outerHTML"
+                        class="w-full min-h-16 rounded-xl bg-orange-600 hover:bg-orange-500 text-xl font-bold active:scale-95">
+                  Start cooking
+                </button>
+              {% elif col.state == "IN_OVEN" %}
+                <button hx-post="/kitchen/{{ c.order.id }}/ready" hx-target="#board" hx-swap="outerHTML"
+                        class="w-full min-h-16 rounded-xl bg-green-600 hover:bg-green-500 text-xl font-bold active:scale-95">
+                  Mark ready
+                </button>
+              {% else %}
+                <div class="text-center text-green-300 font-semibold py-3">Waiting for pickup</div>
+              {% endif %}
+            </article>
+          {% else %}
+            <p class="text-gray-500">No orders</p>
+          {% endfor %}
+        </div>
+      </section>
+    {% endfor %}
+  </div>
+</div>

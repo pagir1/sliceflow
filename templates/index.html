@@ -11,7 +11,10 @@
 
   <header class="bg-white shadow px-6 py-4 flex items-center justify-between">
     <h1 class="text-3xl font-bold text-orange-600">SliceFlow</h1>
-    <span class="text-gray-500">Cashier</span>
+    <nav class="flex gap-2">
+      <span class="px-4 py-2 rounded-lg bg-orange-100 text-orange-800 font-semibold">Cashier</span>
+      <a href="/kitchen" target="_blank" class="px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-100">Kitchen</a>
+    </nav>
   </header>
 
   <main class="grid grid-cols-3 gap-6 p-6">
@@ -28,7 +31,7 @@
               class="grid grid-cols-2 gap-6">
 
           <!-- Left side of the builder: the picture, price and Add button -->
-          <div class="flex flex-col items-center gap-4">
+          <div class="flex flex-col items-center gap-4 sticky top-6 self-start">
             {% include "partials/pizza_preview.html" %}
             <button type="button"
                     hx-post="/cart/add-pizza" hx-target="#ticket" hx-swap="outerHTML"
@@ -56,7 +59,7 @@
             </div>
 
             <div class="font-semibold mb-2">Toppings</div>
-            <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
+            <div class="space-y-2">
               {% for t in toppings %}
                 <div class="flex items-center justify-between gap-2">
                   <span class="text-sm">{{ t.name }}</span>
@@ -113,8 +116,9 @@
 
     </section>
 
-    <!-- RIGHT: the order ticket (1 of 3 columns) -->
-    <aside>
+    <!-- RIGHT: pickup panel and the order ticket (1 of 3 columns) -->
+    <aside class="space-y-6">
+      {% include "partials/pickup.html" %}
       {% include "partials/ticket.html" %}
     </aside>
 

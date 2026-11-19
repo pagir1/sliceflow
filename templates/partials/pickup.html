@@ -1,0 +1,41 @@
+<div id="pickup" hx-get="/pickup" hx-trigger="every 5s" hx-swap="outerHTML">
+  {% if message %}
+    <div class="mb-3 rounded-xl bg-green-50 text-green-800 px-4 py-3 font-semibold">{{ message }}</div>
+  {% endif %}
+  {% if error %}
+    <div class="mb-3 rounded-xl bg-red-50 text-red-800 px-4 py-3">{{ error }}</div>
+  {% endif %}
+
+  {% if pickup %}
+    <div class="bg-white rounded-2xl shadow p-6 border-2 border-green-500">
+      <h2 class="text-xl font-semibold mb-3 text-green-800">Ready for pickup</h2>
+      <ul class="space-y-3">
+        {% for p in pickup %}
+          <li class="flex items-center justify-between gap-3">
+            <div>
+              <div class="text-2xl font-bold">#{{ p.order.id }}</div>
+              {% if p.order.is_paid %}
+                <div class="text-sm text-green-700">Paid</div>
+              {% else %}
+                <div class="text-sm text-red-700">Not paid: {{ p.total | money }}</div>
+              {% endif %}
+            </div>
+            <div class="flex gap-2">
+              {% if not p.order.is_paid %}
+                <button hx-post="/pickup/{{ p.order.id }}/pay/cash" hx-target="#pickup" hx-swap="outerHTML"
+                        class="min-h-12 px-3 rounded-xl bg-green-50 text-green-900 font-semibold">Cash exact</button>
+                <button hx-post="/pickup/{{ p.order.id }}/pay/card" hx-target="#pickup" hx-swap="outerHTML"
+                        class="min-h-12 px-3 rounded-xl bg-sky-100 text-sky-900 font-semibold">Card</button>
+              {% endif %}
+              <button hx-post="/pickup/{{ p.order.id }}/hand-over" hx-target="#pickup" hx-swap="outerHTML"
+                      class="min-h-12 px-4 rounded-xl font-semibold
+                             {% if p.order.is_paid %}bg-green-600 text-white{% else %}bg-gray-100 text-gray-500{% endif %}">
+                Hand over
+              </button>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+</div>

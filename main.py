@@ -5,12 +5,13 @@ from sqlmodel import Session, select
 
 import cart
 import checkout
+import kitchen
 import pizza
-from core.order_state import TransitionError
+from core.order_state import Event, Role, TransitionError
 from core.payment import parse_dollars, quick_cash_options
 from core.pricing import SIZE_PRICE
 from db import create_db, get_session
-from models import MenuItem, Topping
+from models import MenuItem, Order, Topping
 from seed import seed
 
 create_db()
@@ -50,6 +51,7 @@ def cashier_screen(request: Request, session: Session = Depends(get_session)):
         "sizes": sizes,
         "toppings": active_toppings(session),
         "pizza": pizza.build_view("L", []),
+        "pickup": kitchen.ready_for_pickup(session),
         **ticket_context(session),
     }
     return templates.TemplateResponse(request, "index.html", context)
@@ -141,3 +143,75 @@ def send_order_to_kitchen(request: Request, session: Session = Depends(get_sessi
     except TransitionError as e:
         return render_ticket(request, session, error=str(e))
     return render_ticket(request, session, message=f"Order #{order.id} sent to the kitchen")
+
+
+# ---------------- Kitchen display ----------------
+
+KITCHEN_ACTIONS = {"start": Event.START_COOKING, "ready": Event.MARK_READY}
+
+
+def render_board(request: Request, session: Session, error: str = ""):
+    context = {**kitchen.board(session), "error": error}
+    return templates.TemplateResponse(request, "partials/kitchen_board.html", context)
+
+
+@app.get("/kitchen", response_class=HTMLResponse)
+def kitchen_screen(request: Request, session: Session = Depends(get_session)):
+    context = {**kitchen.board(session), "error": ""}
+    return templates.TemplateResponse(request, "kitchen.html", context)
+
+
+@app.get("/kitchen/board", response_class=HTMLResponse)
+def kitchen_board(request: Request, session: Session = Depends(get_session)):
+    return render_board(request, session)
+
+
+@app.post("/kitchen/{order_id}/{action}", response_class=HTMLResponse)
+def kitchen_action(order_id: int, action: str, request: Request,
+                   session: Session = Depends(get_session)):
+    if action not in KITCHEN_ACTIONS:
+        raise HTTPException(status_code=404, detail="Unknown action")
+    try:
+        kitchen.advance(session, order_id, KITCHEN_ACTIONS[action], Role.KITCHEN)
+    except (ValueError, TransitionError) as e:
+        return render_board(request, session, error=str(e))
+    return render_board(request, session)
+
+
+# ---------------- Pickup (cashier side) ----------------
+
+def render_pickup(request: Request, session: Session, message: str = "", error: str = ""):
+    context = {"pickup": kitchen.ready_for_pickup(session), "message": message, "error": error}
+    return templates.TemplateResponse(request, "partials/pickup.html", context)
+
+
+@app.get("/pickup", response_class=HTMLResponse)
+def pickup_panel(request: Request, session: Session = Depends(get_session)):
+    return render_pickup(request, session)
+
+
+@app.post("/pickup/{order_id}/pay/{method}", response_class=HTMLResponse)
+def pickup_pay(order_id: int, method: str, request: Request,
+               session: Session = Depends(get_session)):
+    order = session.get(Order, order_id)
+    try:
+        if order is None or order.state != "READY":
+            raise ValueError("This order is not waiting for pickup")
+        if method == "card":
+            checkout.pay_card(session, order)
+        elif method == "cash":
+            checkout.pay_cash(session, order, checkout.order_total(session, order))
+        else:
+            raise ValueError("Unknown payment method")
+    except ValueError as e:
+        return render_pickup(request, session, error=str(e))
+    return render_pickup(request, session)
+
+
+@app.post("/pickup/{order_id}/hand-over", response_class=HTMLResponse)
+def pickup_hand_over(order_id: int, request: Request, session: Session = Depends(get_session)):
+    try:
+        kitchen.advance(session, order_id, Event.HAND_OVER, Role.CASHIER)
+    except (ValueError, TransitionError) as e:
+        return render_pickup(request, session, error=str(e))
+    return render_pickup(request, session, message=f"Order #{order_id} handed over. Enjoy!")
