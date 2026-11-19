@@ -24,6 +24,11 @@ class Order(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     state: str = "DRAFT"
     created_at: datetime = Field(default_factory=now_utc)
+    submitted_at: datetime | None = None
+    is_paid: bool = False
+    payment_method: str = ""        # "CASH" or "CARD"
+    tendered_cents: int = 0         # money the customer gave
+    change_cents: int = 0           # money we gave back
 
 
 class OrderLine(SQLModel, table=True):

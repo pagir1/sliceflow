@@ -1,8 +1,18 @@
 <div id="ticket" class="bg-white rounded-2xl shadow p-6 sticky top-6">
+
+  {% if message %}
+    <div class="mb-4 rounded-xl bg-green-50 text-green-800 px-4 py-3 font-semibold">{{ message }}</div>
+  {% endif %}
+  {% if error %}
+    <div class="mb-4 rounded-xl bg-red-50 text-red-800 px-4 py-3">{{ error }}</div>
+  {% endif %}
+
   <div class="flex items-center justify-between mb-4">
     <h2 class="text-2xl font-semibold">Order #{{ order.id }}</h2>
-    <button hx-post="/cart/clear" hx-target="#ticket" hx-swap="outerHTML"
-            class="text-sm text-red-600 hover:underline">Clear</button>
+    {% if lines and not order.is_paid %}
+      <button hx-post="/cart/clear" hx-target="#ticket" hx-swap="outerHTML"
+              class="text-sm text-red-600 hover:underline">Clear</button>
+    {% endif %}
   </div>
 
   {% if lines %}
@@ -18,9 +28,11 @@
           </div>
           <div class="flex items-center gap-3 shrink-0">
             <span class="font-semibold">{{ (line.unit_price_cents * line.quantity) | money }}</span>
-            <button hx-post="/cart/remove/{{ line.id }}" hx-target="#ticket" hx-swap="outerHTML"
-                    class="w-12 h-12 rounded-full bg-gray-100 hover:bg-gray-200 text-2xl"
-                    aria-label="Remove one {{ line.name }}">-</button>
+            {% if not order.is_paid %}
+              <button hx-post="/cart/remove/{{ line.id }}" hx-target="#ticket" hx-swap="outerHTML"
+                      class="w-12 h-12 rounded-full bg-gray-100 hover:bg-gray-200 text-2xl"
+                      aria-label="Remove one {{ line.name }}">-</button>
+            {% endif %}
           </div>
         </li>
       {% endfor %}
@@ -34,4 +46,48 @@
     <div class="flex justify-between"><span>Tax (6%)</span><span>{{ tax | money }}</span></div>
     <div class="flex justify-between text-2xl font-bold pt-2"><span>Total</span><span>{{ total | money }}</span></div>
   </div>
+
+  {% if lines and not order.is_paid %}
+    <!-- PAYMENT -->
+    <div class="mt-6 border-t pt-4">
+      <div class="font-semibold mb-2">Cash received</div>
+      <div class="grid grid-cols-3 gap-2 mb-3">
+        {% for amount in cash_options %}
+          <button hx-post="/checkout/cash" hx-vals='{"tendered_cents": {{ amount }}}'
+                  hx-target="#ticket" hx-swap="outerHTML"
+                  class="min-h-14 rounded-xl bg-green-50 hover:bg-green-100 active:scale-95 font-semibold text-green-900">
+            {% if loop.first %}Exact<br><span class="text-sm font-normal">{{ amount | money }}</span>{% else %}{{ amount | money }}{% endif %}
+          </button>
+        {% endfor %}
+      </div>
+      <form hx-post="/checkout/cash" hx-target="#ticket" hx-swap="outerHTML" class="flex gap-2 mb-3">
+        <input name="tendered" inputmode="decimal" placeholder="Other amount, like 40"
+               class="flex-1 min-h-12 rounded-xl border border-gray-300 px-3">
+        <button class="min-h-12 px-4 rounded-xl bg-green-700 text-white font-semibold">Take cash</button>
+      </form>
+      <button hx-post="/checkout/card" hx-target="#ticket" hx-swap="outerHTML"
+              class="w-full min-h-14 rounded-xl bg-sky-100 hover:bg-sky-200 active:scale-95 font-semibold text-sky-900">
+        Pay by card
+      </button>
+    </div>
+  {% endif %}
+
+  {% if order.is_paid %}
+    <div class="mt-6 rounded-xl bg-green-50 p-4 text-center">
+      <div class="text-green-800">Paid by {{ order.payment_method | lower }}</div>
+      {% if order.payment_method == "CASH" %}
+        <div class="text-sm text-green-700">Received {{ order.tendered_cents | money }}</div>
+        <div class="text-sm text-green-700 mt-2">Give change</div>
+        <div class="text-5xl font-bold text-green-800">{{ order.change_cents | money }}</div>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {% if lines %}
+    <button hx-post="/order/send" hx-target="#ticket" hx-swap="outerHTML"
+            class="mt-4 w-full min-h-16 rounded-xl text-xl font-semibold active:scale-95
+                   {% if order.is_paid %}bg-orange-600 hover:bg-orange-700 text-white{% else %}bg-gray-100 hover:bg-gray-200 text-gray-800{% endif %}">
+      {% if order.is_paid %}Send to kitchen{% else %}Send to kitchen, pay later{% endif %}
+    </button>
+  {% endif %}
 </div>

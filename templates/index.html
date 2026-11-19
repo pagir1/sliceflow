@@ -65,9 +65,15 @@
                       <label class="cursor-pointer">
                         <input type="radio" name="t_{{ t.id }}" value="{{ value }}" class="sr-only peer"
                                {% if value == "NONE" %}checked{% endif %}>
-                        <span class="inline-flex items-center justify-center min-w-11 h-11 px-2 rounded-lg
-                                     bg-gray-100 text-sm
-                                     peer-checked:bg-orange-600 peer-checked:text-white">{{ label }}</span>
+                        {% if value == "NONE" %}
+                          <span class="inline-flex items-center justify-center min-w-11 h-11 px-2 rounded-lg
+                                       text-sm text-gray-400 border border-transparent
+                                       peer-checked:border-gray-300 peer-checked:text-gray-600">{{ label }}</span>
+                        {% else %}
+                          <span class="inline-flex items-center justify-center min-w-11 h-11 px-2 rounded-lg
+                                       bg-gray-100 text-sm
+                                       peer-checked:bg-orange-600 peer-checked:text-white">{{ label }}</span>
+                        {% endif %}
                       </label>
                     {% endfor %}
                   </div>

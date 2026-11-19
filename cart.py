@@ -23,7 +23,14 @@ def get_lines(session: Session, order: Order) -> list[OrderLine]:
     ).all()
 
 
+def ensure_editable(order: Order) -> None:
+    # INV-7: items can change only while the order is a Draft and not paid
+    if order.state != "DRAFT" or order.is_paid:
+        raise ValueError("This order can no longer be changed")
+
+
 def add_menu_item(session: Session, order: Order, item_id: int) -> None:
+    ensure_editable(order)
     item = session.get(MenuItem, item_id)
     if item is None or not item.is_active:
         raise ValueError(f"Menu item {item_id} not found")
@@ -43,6 +50,7 @@ def add_menu_item(session: Session, order: Order, item_id: int) -> None:
 
 def add_pizza(session: Session, order: Order, size: str,
               selections: list[tuple[str, str]]) -> None:
+    ensure_editable(order)
     if size not in SIZE_NAMES:
         raise ValueError(f"Unknown size: {size}")
     price = pizza_price(size, selections)   # raises ValueError if a side is wrong
@@ -53,6 +61,7 @@ def add_pizza(session: Session, order: Order, size: str,
 
 
 def remove_one(session: Session, order: Order, line_id: int) -> None:
+    ensure_editable(order)
     line = session.get(OrderLine, line_id)
     if line is None or line.order_id != order.id:
         return
@@ -65,6 +74,7 @@ def remove_one(session: Session, order: Order, line_id: int) -> None:
 
 
 def clear(session: Session, order: Order) -> None:
+    ensure_editable(order)
     for line in get_lines(session, order):
         session.delete(line)
     session.commit()
