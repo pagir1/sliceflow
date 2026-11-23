@@ -39,3 +39,13 @@ class OrderLine(SQLModel, table=True):
     details: str = ""       # pizza toppings, for example "Pepperoni (Left half)"
     unit_price_cents: int   # copied when added (INV-8)
     quantity: int = 1
+
+
+class User(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    name: str
+    role: str                                   # "CASHIER", "KITCHEN" or "MANAGER"
+    pin_hash: str                               # never the real PIN (SR-04)
+    failed_attempts: int = 0
+    locked_until: datetime | None = None
+    is_active: bool = True
