@@ -1,26 +1,4 @@
-import pytest
-from fastapi.testclient import TestClient
-
-import auth
 import tracking
-from db import get_session
-from main import app
-from models import User
-
-
-@pytest.fixture
-def client(session):
-    for name, role, pin in [("Sita", "CASHIER", "1111"), ("Ram", "KITCHEN", "2222"),
-                            ("Pawan", "MANAGER", "9999")]:
-        session.add(User(name=name, role=role, pin_hash=auth.hash_pin(pin, rounds=4)))
-    session.commit()
-
-    def use_test_database():
-        yield session
-
-    app.dependency_overrides[get_session] = use_test_database
-    yield TestClient(app)
-    app.dependency_overrides.clear()
 
 
 def login(client, user_id, pin):
@@ -54,7 +32,8 @@ def test_kitchen_can_use_kitchen_screen_but_not_cashier(client):
 
 
 def test_manager_can_open_both(client):
-    login(client, 3, "9999")
+    r = login(client, 3, "9999")
+    assert r.headers["location"] == "/manager"
     assert client.get("/").status_code == 200
     assert client.get("/kitchen").status_code == 200
 
@@ -74,3 +53,11 @@ def test_customer_pages_stay_public(client):
     assert client.get("/board").status_code == 200
     assert client.get("/login").status_code == 200
     assert client.get(tracking.track_path(1)).status_code == 404     # no order 1 yet, but no login wall
+
+
+def test_only_manager_can_open_manager_screen(client):
+    login(client, 1, "1111")
+    assert client.get("/manager").status_code == 403
+    client.post("/logout")
+    login(client, 3, "9999")
+    assert client.get("/manager").status_code == 200

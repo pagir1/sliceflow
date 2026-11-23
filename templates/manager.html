@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SliceFlow - Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+  <header class="bg-white shadow px-6 py-4 flex items-center justify-between">
+    <h1 class="text-3xl font-bold text-orange-600">SliceFlow</h1>
+    <nav class="flex items-center gap-2">
+      <a href="/" class="px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-100">Cashier</a>
+      <a href="/kitchen" target="_blank" class="px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-100">Kitchen</a>
+      <a href="/board" target="_blank" class="px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-100">Customer board</a>
+      {% include "partials/user_menu.html" %}
+    </nav>
+  </header>
+
+  <main class="max-w-6xl mx-auto p-6 space-y-6">
+
+    <section class="bg-white rounded-2xl shadow p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-2xl font-semibold">Daily sales</h2>
+        <input type="date" name="day" value="{{ report.day.isoformat() }}"
+               hx-get="/manager/report" hx-trigger="change" hx-target="#report" hx-swap="outerHTML"
+               class="rounded-xl border border-gray-300 px-3 py-2">
+      </div>
+      {% include "partials/report.html" %}
+    </section>
+
+    <section class="bg-white rounded-2xl shadow p-6">
+      <h2 class="text-2xl font-semibold mb-1">Void an order</h2>
+      <p class="text-gray-500 mb-4">Only for mistakes or orders the customer never picked up. A reason is required.</p>
+      {% include "partials/void_list.html" %}
+    </section>
+
+  </main>
+</body>
+</html>

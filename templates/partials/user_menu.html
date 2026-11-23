@@ -1,5 +1,10 @@
 {% set user = request.state.user %}
 <div class="flex items-center gap-3 ml-4 pl-4 border-l border-gray-300">
+  {% if user.role == "MANAGER" %}
+    <a href="/manager" class="px-3 py-2 rounded-lg text-sm border border-gray-300 hover:bg-gray-100 hover:text-gray-900">
+      Manager
+    </a>
+  {% endif %}
   <span class="font-semibold">{{ user.name }}</span>
   <span class="text-sm opacity-60">{{ user.role | lower }}</span>
   <form method="post" action="/logout">

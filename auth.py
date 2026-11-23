@@ -8,7 +8,7 @@ from models import User
 MAX_ATTEMPTS = 5        # FR-01: 5 wrong PINs in a row ...
 LOCK_SECONDS = 60       # ... locks the account for 1 minute
 
-HOME_PAGE = {"CASHIER": "/", "KITCHEN": "/kitchen", "MANAGER": "/"}
+HOME_PAGE = {"CASHIER": "/", "KITCHEN": "/kitchen", "MANAGER": "/manager"}
 
 
 class LoginError(Exception):

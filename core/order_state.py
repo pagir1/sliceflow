@@ -32,7 +32,9 @@ TRANSITIONS = {
     (State.SUBMITTED, Event.START_COOKING): (State.IN_OVEN, {Role.KITCHEN}),
     (State.SUBMITTED, Event.VOID): (State.CANCELLED, {Role.MANAGER}),
     (State.IN_OVEN, Event.MARK_READY): (State.READY, {Role.KITCHEN}),
+    (State.IN_OVEN, Event.VOID): (State.CANCELLED, {Role.MANAGER}),     # CR-02
     (State.READY, Event.HAND_OVER): (State.COMPLETED, {Role.CASHIER}),
+    (State.READY, Event.VOID): (State.CANCELLED, {Role.MANAGER}),
 }
 
 FINAL_STATES = {State.COMPLETED, State.CANCELLED}

@@ -1,0 +1,25 @@
+<div id="void-list">
+  {% if message %}
+    <div class="mb-3 rounded-xl bg-green-50 text-green-800 px-4 py-3 font-semibold">{{ message }}</div>
+  {% endif %}
+  {% if error %}
+    <div class="mb-3 rounded-xl bg-red-50 text-red-800 px-4 py-3">{{ error }}</div>
+  {% endif %}
+
+  {% for v in voidable %}
+    <form hx-post="/manager/void/{{ v.order.id }}" hx-target="#void-list" hx-swap="outerHTML"
+          class="flex items-center gap-3 py-3 border-b">
+      <span class="text-2xl font-bold w-16">#{{ v.order.id }}</span>
+      <span class="w-28 text-sm rounded-full bg-slate-100 text-center py-1">{{ v.order.state | replace("_", " ") | lower }}</span>
+      <span class="w-24">{{ v.total | money }}</span>
+      <span class="w-20 text-sm {% if v.order.is_paid %}text-green-700{% else %}text-gray-500{% endif %}">
+        {% if v.order.is_paid %}paid{% else %}not paid{% endif %}
+      </span>
+      <input name="reason" placeholder="Reason, like: customer never came"
+             class="flex-1 min-h-11 rounded-xl border border-gray-300 px-3">
+      <button class="min-h-11 px-4 rounded-xl bg-red-600 text-white font-semibold">Void</button>
+    </form>
+  {% else %}
+    <p class="text-gray-400">No open orders</p>
+  {% endfor %}
+</div>

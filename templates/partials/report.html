@@ -1,0 +1,45 @@
+<div id="report">
+  <div class="grid grid-cols-4 gap-4 mb-6">
+    <div class="rounded-xl bg-slate-100 p-4">
+      <div class="text-sm text-gray-500">Total sales</div>
+      <div class="text-3xl font-bold">{{ report.total | money }}</div>
+    </div>
+    <div class="rounded-xl bg-slate-100 p-4">
+      <div class="text-sm text-gray-500">Completed orders</div>
+      <div class="text-3xl font-bold">{{ report.completed }}</div>
+    </div>
+    <div class="rounded-xl bg-slate-100 p-4">
+      <div class="text-sm text-gray-500">Tax collected</div>
+      <div class="text-3xl font-bold">{{ report.tax | money }}</div>
+    </div>
+    <div class="rounded-xl bg-slate-100 p-4">
+      <div class="text-sm text-gray-500">Cancelled</div>
+      <div class="text-3xl font-bold">{{ report.cancelled }}</div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 gap-6">
+    <div>
+      <h3 class="font-semibold mb-2">Payments</h3>
+      <div class="flex justify-between py-1"><span>Cash</span><span>{{ report.cash | money }}</span></div>
+      <div class="flex justify-between py-1"><span>Card</span><span>{{ report.card | money }}</span></div>
+      <div class="flex justify-between py-1 text-gray-500"><span>Still open (not picked up)</span><span>{{ report.open }} orders</span></div>
+      {% if report.voided_after_payment %}
+        <div class="flex justify-between py-1 text-red-700">
+          <span>Voided after payment (refund owed)</span><span>{{ report.voided_after_payment | money }}</span>
+        </div>
+      {% endif %}
+    </div>
+    <div>
+      <h3 class="font-semibold mb-2">Top items</h3>
+      {% for item in report.top_items %}
+        <div class="flex justify-between py-1">
+          <span>{{ loop.index }}. {{ item.name }}</span>
+          <span class="text-gray-600">{{ item.quantity }} sold · {{ item.revenue | money }}</span>
+        </div>
+      {% else %}
+        <p class="text-gray-400">No completed orders on this day</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>

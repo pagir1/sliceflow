@@ -29,6 +29,8 @@ class Order(SQLModel, table=True):
     payment_method: str = ""        # "CASH" or "CARD"
     tendered_cents: int = 0         # money the customer gave
     change_cents: int = 0           # money we gave back
+    void_reason: str = ""           # why a manager voided it
+    voided_by: str = ""             # which manager voided it
 
 
 class OrderLine(SQLModel, table=True):

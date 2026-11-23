@@ -1,4 +1,5 @@
 import os
+from datetime import date
 
 from fastapi import APIRouter, FastAPI, Request, Depends, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -11,6 +12,7 @@ import cart
 import checkout
 import display
 import kitchen
+import manager
 import pizza
 import tracking
 from core.order_state import Event, Role, TransitionError
@@ -74,6 +76,7 @@ def require(*roles: str):
 
 cashier_routes = APIRouter(dependencies=[Depends(require("CASHIER", "MANAGER"))])
 kitchen_routes = APIRouter(dependencies=[Depends(require("KITCHEN", "MANAGER"))])
+manager_routes = APIRouter(dependencies=[Depends(require("MANAGER"))])
 
 
 @app.get("/login", response_class=HTMLResponse)
@@ -340,6 +343,46 @@ def tracker_live(order_id: int, token: str, request: Request,
                                       tracking.tracker_view(session, order))
 
 
+# ---------------- Manager ----------------
+
+def parse_day(text: str | None) -> date:
+    try:
+        return date.fromisoformat(text) if text else manager.today_local()
+    except ValueError:
+        return manager.today_local()
+
+
+def render_void_list(request: Request, session: Session, message: str = "", error: str = ""):
+    context = {"voidable": manager.voidable_orders(session), "message": message, "error": error}
+    return templates.TemplateResponse(request, "partials/void_list.html", context)
+
+
+@manager_routes.get("/manager", response_class=HTMLResponse)
+def manager_screen(request: Request, day: str | None = None,
+                   session: Session = Depends(get_session)):
+    context = {"report": manager.daily_report(session, parse_day(day)),
+               "voidable": manager.voidable_orders(session), "message": "", "error": ""}
+    return templates.TemplateResponse(request, "manager.html", context)
+
+
+@manager_routes.get("/manager/report", response_class=HTMLResponse)
+def manager_report(request: Request, day: str | None = None,
+                   session: Session = Depends(get_session)):
+    return templates.TemplateResponse(request, "partials/report.html",
+                                      {"report": manager.daily_report(session, parse_day(day))})
+
+
+@manager_routes.post("/manager/void/{order_id}", response_class=HTMLResponse)
+async def manager_void(order_id: int, request: Request, session: Session = Depends(get_session)):
+    form = await request.form()
+    try:
+        manager.void_order(session, order_id, form.get("reason", ""), request.state.user)
+    except (ValueError, TransitionError) as e:
+        return render_void_list(request, session, error=str(e))
+    return render_void_list(request, session, message=f"Order #{order_id} voided")
+
+
 # Routers are added last, after all their routes are defined.
 app.include_router(cashier_routes)
 app.include_router(kitchen_routes)
+app.include_router(manager_routes)

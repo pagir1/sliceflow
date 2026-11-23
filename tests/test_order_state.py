@@ -35,6 +35,14 @@ def test_only_manager_can_void():
         next_state(State.SUBMITTED, Event.VOID, Role.CASHIER)
 
 
+def test_manager_can_void_in_oven_and_ready():
+    # CR-02
+    assert next_state(State.IN_OVEN, Event.VOID, Role.MANAGER) == State.CANCELLED
+    assert next_state(State.READY, Event.VOID, Role.MANAGER) == State.CANCELLED
+    with pytest.raises(TransitionError):
+        next_state(State.READY, Event.VOID, Role.KITCHEN)
+
+
 def test_cannot_skip_steps():
     with pytest.raises(TransitionError):
         next_state(State.DRAFT, Event.MARK_READY, Role.KITCHEN)
