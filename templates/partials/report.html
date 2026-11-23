@@ -1,4 +1,5 @@
-<div id="report">
+<div id="report" hx-get="/manager/report?day={{ report.day.isoformat() }}"
+     hx-trigger="report-changed from:body" hx-swap="outerHTML">
   <div class="grid grid-cols-4 gap-4 mb-6">
     <div class="rounded-xl bg-slate-100 p-4">
       <div class="text-sm text-gray-500">Total sales</div>

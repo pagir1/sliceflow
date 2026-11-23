@@ -357,11 +357,17 @@ def render_void_list(request: Request, session: Session, message: str = "", erro
     return templates.TemplateResponse(request, "partials/void_list.html", context)
 
 
+def render_menu_editor(request: Request, session: Session, message: str = "", error: str = ""):
+    context = {**manager.menu_for_editing(session), "menu_message": message, "menu_error": error}
+    return templates.TemplateResponse(request, "partials/menu_editor.html", context)
+
+
 @manager_routes.get("/manager", response_class=HTMLResponse)
 def manager_screen(request: Request, day: str | None = None,
                    session: Session = Depends(get_session)):
     context = {"report": manager.daily_report(session, parse_day(day)),
-               "voidable": manager.voidable_orders(session), "message": "", "error": ""}
+               "voidable": manager.voidable_orders(session), "message": "", "error": "",
+               **manager.menu_for_editing(session), "menu_message": "", "menu_error": ""}
     return templates.TemplateResponse(request, "manager.html", context)
 
 
@@ -379,7 +385,39 @@ async def manager_void(order_id: int, request: Request, session: Session = Depen
         manager.void_order(session, order_id, form.get("reason", ""), request.state.user)
     except (ValueError, TransitionError) as e:
         return render_void_list(request, session, error=str(e))
-    return render_void_list(request, session, message=f"Order #{order_id} voided")
+    response = render_void_list(request, session, message=f"Order #{order_id} voided")
+    response.headers["HX-Trigger"] = "report-changed"     # tell the report to reload itself
+    return response
+
+
+@manager_routes.post("/manager/menu/{item_id}/price", response_class=HTMLResponse)
+async def manager_set_price(item_id: int, request: Request, session: Session = Depends(get_session)):
+    form = await request.form()
+    try:
+        item = manager.update_price(session, item_id, form.get("price", ""))
+    except ValueError as e:
+        return render_menu_editor(request, session, error=str(e))
+    return render_menu_editor(request, session, message=f"{item.name} now costs ${item.price_cents // 100}.{item.price_cents % 100:02d}")
+
+
+@manager_routes.post("/manager/menu/{item_id}/toggle", response_class=HTMLResponse)
+def manager_toggle_item(item_id: int, request: Request, session: Session = Depends(get_session)):
+    try:
+        item = manager.toggle_item(session, item_id)
+    except ValueError as e:
+        return render_menu_editor(request, session, error=str(e))
+    state = "shown on" if item.is_active else "hidden from"
+    return render_menu_editor(request, session, message=f"{item.name} is {state} the menu")
+
+
+@manager_routes.post("/manager/topping/{topping_id}/toggle", response_class=HTMLResponse)
+def manager_toggle_topping(topping_id: int, request: Request, session: Session = Depends(get_session)):
+    try:
+        topping = manager.toggle_topping(session, topping_id)
+    except ValueError as e:
+        return render_menu_editor(request, session, error=str(e))
+    state = "shown on" if topping.is_active else "hidden from"
+    return render_menu_editor(request, session, message=f"{topping.name} is {state} the menu")
 
 
 # Routers are added last, after all their routes are defined.

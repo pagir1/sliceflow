@@ -1,0 +1,41 @@
+<div id="menu-editor">
+  {% if menu_message %}
+    <div class="mb-3 rounded-xl bg-green-50 text-green-800 px-4 py-3 font-semibold">{{ menu_message }}</div>
+  {% endif %}
+  {% if menu_error %}
+    <div class="mb-3 rounded-xl bg-red-50 text-red-800 px-4 py-3">{{ menu_error }}</div>
+  {% endif %}
+
+  <h3 class="font-semibold mb-2">Sides and drinks</h3>
+  <div class="divide-y mb-6">
+    {% for item in items %}
+      <div class="flex items-center gap-3 py-2 {% if not item.is_active %}opacity-50{% endif %}">
+        <span class="flex-1">{{ item.name }}</span>
+        <span class="w-16 text-sm text-gray-500">{{ item.category }}</span>
+        <form hx-post="/manager/menu/{{ item.id }}/price" hx-target="#menu-editor" hx-swap="outerHTML"
+              class="flex items-center gap-2">
+          <span class="text-gray-500">$</span>
+          <input name="price" inputmode="decimal" value="{{ item.price_cents // 100 }}.{{ '%02d' % (item.price_cents % 100) }}"
+                 class="w-24 min-h-11 rounded-xl border border-gray-300 px-3">
+          <button class="min-h-11 px-3 rounded-xl border border-gray-300 hover:bg-gray-100">Save</button>
+        </form>
+        <button hx-post="/manager/menu/{{ item.id }}/toggle" hx-target="#menu-editor" hx-swap="outerHTML"
+                class="min-h-11 w-24 rounded-xl font-semibold
+                       {% if item.is_active %}bg-green-50 text-green-800{% else %}bg-gray-200 text-gray-700{% endif %}">
+          {% if item.is_active %}Shown{% else %}Hidden{% endif %}
+        </button>
+      </div>
+    {% endfor %}
+  </div>
+
+  <h3 class="font-semibold mb-2">Toppings <span class="font-normal text-gray-500 text-sm">(tap to hide one that ran out)</span></h3>
+  <div class="flex flex-wrap gap-2">
+    {% for t in toppings %}
+      <button hx-post="/manager/topping/{{ t.id }}/toggle" hx-target="#menu-editor" hx-swap="outerHTML"
+              class="min-h-11 px-4 rounded-full
+                     {% if t.is_active %}bg-orange-100 text-orange-900{% else %}bg-gray-200 text-gray-500 line-through{% endif %}">
+        {{ t.name }}
+      </button>
+    {% endfor %}
+  </div>
+</div>

@@ -7,7 +7,8 @@ from sqlmodel import Session, select
 
 import cart
 from core.order_state import Event, Role, State, next_state
-from models import Order, User
+from core.payment import parse_dollars
+from models import MenuItem, Order, Topping, User
 
 # The restaurant's own clock. Times are saved in UTC; reports use local days.
 LOCAL_TZ = ZoneInfo(os.environ.get("SLICEFLOW_TZ", "America/New_York"))
@@ -83,3 +84,47 @@ def void_order(session: Session, order_id: int, reason: str, manager: User) -> O
     session.add(order)
     session.commit()
     return order
+
+
+# ---------------- Menu editing ----------------
+
+MAX_PRICE_CENTS = 100_00     # $100: a typo guard, no side or drink costs more
+
+
+def menu_for_editing(session: Session) -> dict:
+    items = session.exec(select(MenuItem).order_by(MenuItem.category, MenuItem.name)).all()
+    toppings = session.exec(select(Topping).order_by(Topping.id)).all()
+    return {"items": items, "toppings": toppings}
+
+
+def update_price(session: Session, item_id: int, text: str) -> MenuItem:
+    item = session.get(MenuItem, item_id)
+    if item is None:
+        raise ValueError("Menu item not found")
+    cents = parse_dollars(text)                  # "2.75" -> 275, never a float
+    if cents <= 0 or cents > MAX_PRICE_CENTS:
+        raise ValueError(f"Price for {item.name} must be between $0.01 and $100.00")
+    item.price_cents = cents                     # old orders keep their own copy (INV-8)
+    session.add(item)
+    session.commit()
+    return item
+
+
+def toggle_item(session: Session, item_id: int) -> MenuItem:
+    item = session.get(MenuItem, item_id)
+    if item is None:
+        raise ValueError("Menu item not found")
+    item.is_active = not item.is_active          # hide instead of delete (FR-02)
+    session.add(item)
+    session.commit()
+    return item
+
+
+def toggle_topping(session: Session, topping_id: int) -> Topping:
+    topping = session.get(Topping, topping_id)
+    if topping is None:
+        raise ValueError("Topping not found")
+    topping.is_active = not topping.is_active
+    session.add(topping)
+    session.commit()
+    return topping
