@@ -1,0 +1,61 @@
+{% set finished = order.state in ("COMPLETED", "CANCELLED") %}
+<div id="track"
+     {% if not finished %}hx-get="/track/{{ order.id }}/{{ token }}/live" hx-trigger="every 4s" hx-swap="outerHTML"{% endif %}
+     class="bg-white rounded-3xl shadow p-6">
+
+  <div class="text-center mb-5">
+    <div class="text-gray-500">Your order</div>
+    <div class="text-5xl font-bold">#{{ order.id }}</div>
+  </div>
+
+  {% if order.state == "READY" %}
+    <div class="mb-5 rounded-2xl bg-green-600 text-white text-center p-5 animate-pulse">
+      <div class="text-2xl font-bold">Your order is ready!</div>
+      <div>Please come to the counter.</div>
+    </div>
+  {% elif order.state == "CANCELLED" %}
+    <div class="mb-5 rounded-2xl bg-red-50 text-red-800 text-center p-5">
+      This order was cancelled. Please talk to the cashier.
+    </div>
+  {% elif order.state == "DRAFT" %}
+    <div class="mb-5 rounded-2xl bg-gray-100 text-gray-700 text-center p-5">
+      This order has not been sent to the kitchen yet.
+    </div>
+  {% endif %}
+
+  <ol class="mb-6">
+    {% for state, label in stages %}
+      {% set done = loop.index0 < stage_index %}
+      {% set current = loop.index0 == stage_index %}
+      <li class="flex items-center gap-3 py-2">
+        <span class="w-9 h-9 rounded-full flex items-center justify-center font-bold shrink-0
+                     {% if done %}bg-green-100 text-green-700
+                     {% elif current %}bg-orange-500 text-white {% if not finished %}animate-pulse{% endif %}
+                     {% else %}border-2 border-gray-200 text-gray-300{% endif %}">
+          {% if done %}&#10003;{% else %}{{ loop.index }}{% endif %}
+        </span>
+        <span class="text-lg {% if current %}font-bold{% elif not done %}text-gray-400{% endif %}">{{ label }}</span>
+      </li>
+    {% endfor %}
+  </ol>
+
+  {% for p in pizzas %}
+    <div class="flex items-center gap-4 border-t pt-4 mt-4">
+      {% with pizza=p, svg_class="w-28 h-28 shrink-0" %}
+        {% include "partials/pizza_svg.html" %}
+      {% endwith %}
+      <div>
+        <div class="font-semibold">{{ p.size_name }} Pizza</div>
+        <div class="text-sm text-gray-600">{{ p.summary }}</div>
+      </div>
+    </div>
+  {% endfor %}
+
+  {% if others %}
+    <ul class="border-t pt-4 mt-4 space-y-1">
+      {% for line in others %}
+        <li class="text-gray-700">{{ line.quantity }} x {{ line.name }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</div>

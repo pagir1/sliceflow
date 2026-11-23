@@ -38,6 +38,29 @@ def describe(selections: list[tuple[str, str]]) -> str:
     return ", ".join(f"{name} ({SIDE_NAMES[side]})" for name, side in selections)
 
 
+def parse_details(details: str) -> list[tuple[str, str]]:
+    """The opposite of describe(): "Pepperoni (Left half)" -> [("Pepperoni", "LEFT")]."""
+    if details in ("", "Cheese only"):
+        return []
+    side_codes = {label: code for code, label in SIDE_NAMES.items()}
+    selections = []
+    for part in details.split(", "):
+        name, _, rest = part.rpartition(" (")
+        label = rest.rstrip(")")
+        if not name or label not in side_codes:
+            raise ValueError(f"Cannot read topping: {part}")
+        selections.append((name, side_codes[label]))
+    return selections
+
+
+def size_from_line_name(line_name: str) -> str:
+    """ "Large Pizza" -> "L" """
+    for code, name in SIZE_NAMES.items():
+        if line_name == f"{name} Pizza":
+            return code
+    raise ValueError(f"Not a pizza: {line_name}")
+
+
 def topping_dots(selections: list[tuple[str, str]]) -> list[dict]:
     dots = []
     n = len(LEFT_SPOTS)

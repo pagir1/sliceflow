@@ -8,6 +8,7 @@ import checkout
 import display
 import kitchen
 import pizza
+import tracking
 from core.order_state import Event, Role, TransitionError
 from core.payment import parse_dollars, quick_cash_options
 from core.pricing import SIZE_PRICE
@@ -27,18 +28,22 @@ def active_toppings(session: Session) -> list[Topping]:
     return session.exec(select(Topping).where(Topping.is_active).order_by(Topping.id)).all()
 
 
-def ticket_context(session: Session, message: str = "", error: str = "") -> dict:
+def ticket_context(session: Session, message: str = "", error: str = "",
+                   sent_qr: str = "", sent_url: str = "") -> dict:
     order = cart.get_or_create_draft(session)
     context = cart.ticket(session, order)
     context["cash_options"] = quick_cash_options(context["total"]) if context["lines"] else []
     context["message"] = message
     context["error"] = error
+    context["sent_qr"] = sent_qr
+    context["sent_url"] = sent_url
     return context
 
 
-def render_ticket(request: Request, session: Session, message: str = "", error: str = ""):
+def render_ticket(request: Request, session: Session, message: str = "", error: str = "",
+                  sent_qr: str = "", sent_url: str = ""):
     return templates.TemplateResponse(request, "partials/ticket.html",
-                                      ticket_context(session, message, error))
+                                      ticket_context(session, message, error, sent_qr, sent_url))
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -143,7 +148,9 @@ def send_order_to_kitchen(request: Request, session: Session = Depends(get_sessi
         checkout.send_to_kitchen(session, order)
     except TransitionError as e:
         return render_ticket(request, session, error=str(e))
-    return render_ticket(request, session, message=f"Order #{order.id} sent to the kitchen")
+    url = str(request.base_url).rstrip("/") + tracking.track_path(order.id)
+    return render_ticket(request, session, message=f"Order #{order.id} sent to the kitchen",
+                         sent_qr=tracking.qr_svg(url), sent_url=url)
 
 
 # ---------------- Kitchen display ----------------
@@ -229,3 +236,27 @@ def customer_board_screen(request: Request, session: Session = Depends(get_sessi
 def customer_board_live(request: Request, session: Session = Depends(get_session)):
     return templates.TemplateResponse(request, "partials/board_live.html",
                                       display.customer_board(session))
+
+
+# ---------------- Order tracker (customer phone) ----------------
+
+def tracked_order(session: Session, order_id: int, token: str) -> Order:
+    order = session.get(Order, order_id)
+    if order is None or not tracking.is_valid(order_id, token):
+        raise HTTPException(status_code=404, detail="Order not found")
+    return order
+
+
+@app.get("/track/{order_id}/{token}", response_class=HTMLResponse)
+def tracker_screen(order_id: int, token: str, request: Request,
+                   session: Session = Depends(get_session)):
+    order = tracked_order(session, order_id, token)
+    return templates.TemplateResponse(request, "tracker.html", tracking.tracker_view(session, order))
+
+
+@app.get("/track/{order_id}/{token}/live", response_class=HTMLResponse)
+def tracker_live(order_id: int, token: str, request: Request,
+                 session: Session = Depends(get_session)):
+    order = tracked_order(session, order_id, token)
+    return templates.TemplateResponse(request, "partials/tracker_live.html",
+                                      tracking.tracker_view(session, order))

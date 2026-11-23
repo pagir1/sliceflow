@@ -1,0 +1,10 @@
+<svg viewBox="0 0 240 240" class="{{ svg_class | default('w-64 h-64') }}" role="img"
+     aria-label="{{ pizza.size_name }} pizza: {{ pizza.summary }}">
+  <circle cx="120" cy="120" r="112" fill="#e7b46a"/>
+  <circle cx="120" cy="120" r="96" fill="#d9472b"/>
+  <circle cx="120" cy="120" r="90" fill="#f7d774"/>
+  <line x1="120" y1="28" x2="120" y2="212" stroke="#e7b46a" stroke-width="3" stroke-dasharray="6 5"/>
+  {% for d in pizza.dots %}
+    <circle cx="{{ d.x }}" cy="{{ d.y }}" r="9" fill="{{ d.color }}" stroke="white" stroke-width="1.5"/>
+  {% endfor %}
+</svg>
