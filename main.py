@@ -100,16 +100,26 @@ def back_to_paid_order(request: Request):
     return RedirectResponse("/", status_code=303)
 
 
+def read_user_id(form) -> int:
+    """The chosen user id, or 0 (nobody) if it is missing or not a usable number."""
+    try:
+        user_id = int(form.get("user_id") or 0)
+    except (TypeError, ValueError):
+        return 0
+    return user_id if 0 < user_id < 2**63 else 0       # 2**63 does not fit in the database
+
+
 @app.post("/login", response_class=HTMLResponse)
 async def login(request: Request, session: Session = Depends(get_session)):
     if has_paid_unsent_order(request, session):        # a new login would replace this session
         return back_to_paid_order(request)
     form = await request.form()
+    user_id = read_user_id(form)
     try:
-        user = auth.attempt_login(session, int(form.get("user_id") or 0), form.get("pin", ""))
+        user = auth.attempt_login(session, user_id, form.get("pin", ""))
     except auth.LoginError as e:
         context = {"staff": auth.active_staff(session), "error": str(e),
-                   "chosen": int(form.get("user_id") or 0)}
+                   "chosen": user_id}
         return templates.TemplateResponse(request, "login.html", context, status_code=401)
     request.session.clear()
     request.session["user_id"] = user.id

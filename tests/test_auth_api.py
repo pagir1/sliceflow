@@ -1,3 +1,5 @@
+import pytest
+
 import tracking
 
 
@@ -61,3 +63,15 @@ def test_only_manager_can_open_manager_screen(client):
     client.post("/logout")
     login(client, 3, "9999")
     assert client.get("/manager").status_code == 200
+
+
+@pytest.mark.parametrize("user_id", ["abc", "1.5", "1; DROP TABLE user", "", "-1", "9" * 30,
+                                     "9" * 5000])
+def test_bad_user_id_shows_choose_your_name(client, user_id):
+    r = login(client, user_id, "1111")
+    assert r.status_code == 401 and "Choose your name first" in r.text
+
+
+def test_uploaded_file_as_user_id_shows_choose_your_name(client):
+    r = client.post("/login", data={"pin": "1111"}, files={"user_id": ("a.txt", b"1")})
+    assert r.status_code == 401 and "Choose your name first" in r.text
