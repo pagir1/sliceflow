@@ -10,8 +10,8 @@ import seed
 from models import Topping, User
 from test_config import start_app
 
-PINS = {"SLICEFLOW_PIN_CASHIER": "4821", "SLICEFLOW_PIN_KITCHEN": "5932",
-        "SLICEFLOW_PIN_MANAGER": "6043"}
+PINS = {"BHANSA_PIN_CASHIER": "4821", "BHANSA_PIN_KITCHEN": "5932",
+        "BHANSA_PIN_MANAGER": "6043"}
 DEMO_PINS = {"CASHIER": "1111", "KITCHEN": "2222", "MANAGER": "9999"}
 
 
@@ -28,7 +28,7 @@ def test_database_default(monkeypatch, value):
 def test_app_uses_database_url(tmp_path):
     disk = tmp_path / "disk"
     disk.mkdir()
-    result = start_app(tmp_path, SLICEFLOW_SECRET="private", **PINS,
+    result = start_app(tmp_path, BHANSA_SECRET="private", **PINS,
                        DATABASE_URL=f"sqlite:///{(disk / 'shop.db').as_posix()}")
     assert result.returncode == 0, result.stderr
     assert (disk / "shop.db").exists()
@@ -43,7 +43,7 @@ def empty_db(monkeypatch):
                            poolclass=StaticPool)
     SQLModel.metadata.create_all(engine)
     monkeypatch.setattr(seed, "engine", engine)
-    for name in [*PINS, "SLICEFLOW_DEV"]:
+    for name in [*PINS, "BHANSA_DEV"]:
         monkeypatch.delenv(name, raising=False)
     return engine
 
@@ -58,11 +58,11 @@ def test_pins_come_from_env(empty_db, monkeypatch):
     for name, pin in PINS.items():
         monkeypatch.setenv(name, pin)
     seed.seed()
-    assert has_pins(empty_db, {n.removeprefix("SLICEFLOW_PIN_"): p for n, p in PINS.items()})
+    assert has_pins(empty_db, {n.removeprefix("BHANSA_PIN_"): p for n, p in PINS.items()})
 
 
 def test_dev_mode_keeps_demo_pins(empty_db, monkeypatch):
-    monkeypatch.setenv("SLICEFLOW_DEV", "1")
+    monkeypatch.setenv("BHANSA_DEV", "1")
     seed.seed()
     assert has_pins(empty_db, DEMO_PINS)
 
@@ -100,7 +100,7 @@ def test_login_cookie_is_https_only(client):
 def test_https_only_follows_dev_mode(tmp_path, dev, expected):
     code = ("import main; m = [m for m in main.app.user_middleware if 'https_only' in m.kwargs][0];"
             f"assert m.kwargs['https_only'] is {expected}")
-    result = start_app(tmp_path, code=code, SLICEFLOW_SECRET="private", SLICEFLOW_DEV=dev, **PINS)
+    result = start_app(tmp_path, code=code, BHANSA_SECRET="private", BHANSA_DEV=dev, **PINS)
     assert result.returncode == 0, result.stderr
 
 

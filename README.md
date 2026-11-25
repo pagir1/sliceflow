@@ -1,4 +1,4 @@
-# SliceFlow
+# Bhansa
 
 A pizza shop point-of-sale web app: cashier screen, kitchen display, customer board,
 QR order tracking and a manager screen. Built with FastAPI, SQLModel (SQLite) and HTMX.
@@ -16,7 +16,7 @@ pip install -r requirements.txt
 For local development:
 
 ```powershell
-$env:SLICEFLOW_DEV = "1"
+$env:BHANSA_DEV = "1"
 uvicorn main:app --reload
 ```
 
@@ -24,10 +24,10 @@ For real use, set a private secret instead. The app refuses to start without one
 
 ```powershell
 python -c "import secrets; print(secrets.token_hex(32))"    # make one, once
-$env:SLICEFLOW_SECRET = "<the value printed above>"
-$env:SLICEFLOW_PIN_CASHIER = "<4 digits>"     # the PINs are needed on the first start only
-$env:SLICEFLOW_PIN_KITCHEN = "<4 digits>"
-$env:SLICEFLOW_PIN_MANAGER = "<4 digits>"
+$env:BHANSA_SECRET = "<the value printed above>"
+$env:BHANSA_PIN_CASHIER = "<4 digits>"     # the PINs are needed on the first start only
+$env:BHANSA_PIN_KITCHEN = "<4 digits>"
+$env:BHANSA_PIN_MANAGER = "<4 digits>"
 uvicorn main:app
 ```
 
@@ -43,11 +43,15 @@ Open http://127.0.0.1:8000. The first start creates `sliceflow.db` with a demo m
 
 | Environment variable | Meaning |
 | --- | --- |
-| `SLICEFLOW_SECRET` | Signs login sessions and tracker links. Required outside dev mode. |
-| `SLICEFLOW_DEV` | `1`, `true`, `yes` or `on` allows the public default secret. Development only. |
+| `BHANSA_SECRET` | Signs login sessions and tracker links. Required outside dev mode. |
+| `BHANSA_DEV` | `1`, `true`, `yes` or `on` allows the public default secret. Development only. |
 | `DATABASE_URL` | Where the database is. Default: `sqlite:///sliceflow.db`. |
-| `SLICEFLOW_PIN_CASHIER`, `SLICEFLOW_PIN_KITCHEN`, `SLICEFLOW_PIN_MANAGER` | 4-digit staff PINs, used when the staff are first created. Required then outside dev mode, where the demo PINs are refused. |
-| `SLICEFLOW_TZ` | Time zone for daily reports. Default: `America/New_York`. |
+| `BHANSA_PIN_CASHIER`, `BHANSA_PIN_KITCHEN`, `BHANSA_PIN_MANAGER` | 4-digit staff PINs, used when the staff are first created. Required then outside dev mode, where the demo PINs are refused. |
+| `BHANSA_TZ` | Time zone for daily reports. Default: `America/New_York`. |
+
+The app used to be called SliceFlow. The old `SLICEFLOW_*` names still work; if both are set,
+the `BHANSA_*` one wins. `render.yaml` and the database file keep their old names so existing
+deployments and data are not affected.
 
 ## Demo logins (dev mode only)
 
@@ -81,12 +85,12 @@ the kitchen. Card payments are simulated; no card data is handled.
 
 1. Push this repository to GitHub.
 2. In Render choose **New > Blueprint** and pick the repository. Render reads `render.yaml`.
-3. Fill in the values Render asks for: `SLICEFLOW_SECRET` (make one with the command under
-   [Run](#run)) and three 4-digit PINs. The demo PINs are refused.
+3. Fill in the values Render asks for: `SLICEFLOW_SECRET` (the same as `BHANSA_SECRET`;
+   make one with the command under [Run](#run)) and three 4-digit PINs. The demo PINs are refused.
 4. After the deploy, open the `https://....onrender.com` address and log in.
 
 The start command trusts Render's proxy headers, so QR tracker links use `https://`.
-Do not set `SLICEFLOW_DEV` on Render.
+Do not set `BHANSA_DEV` or `SLICEFLOW_DEV` on Render.
 
 **The free plan does not keep data.** Its disk is wiped on every deploy, restart and spin-down
 (after 15 minutes without visitors), and the app starts again with a fresh menu and no orders.

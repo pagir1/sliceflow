@@ -1,5 +1,3 @@
-import os
-
 from sqlmodel import Session, select
 
 import auth
@@ -30,9 +28,9 @@ STAFF = [
 
 
 def staff_pin(role: str, demo_pin: str) -> str:
-    """The first PIN for this role, from SLICEFLOW_PIN_<role>. Demo PINs only in dev mode."""
-    name = f"SLICEFLOW_PIN_{role}"
-    pin = os.environ.get(name, "").strip()
+    """The first PIN for this role, from BHANSA_PIN_<role>. Demo PINs only in dev mode."""
+    name = f"BHANSA_PIN_{role}"
+    pin = config.setting(f"PIN_{role}")
     if not pin and config.is_dev_mode():
         return demo_pin
     if not auth.is_valid_pin_format(pin):

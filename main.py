@@ -25,7 +25,7 @@ from seed import seed
 create_db()
 seed()
 
-app = FastAPI()
+app = FastAPI(title="Bhansa")
 app.add_middleware(SessionMiddleware,
                    secret_key=config.SECRET,
                    https_only=not config.is_dev_mode(),

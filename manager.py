@@ -1,4 +1,3 @@
-import os
 from collections import defaultdict
 from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -7,12 +6,13 @@ from sqlmodel import Session, select
 
 import cart
 import checkout
+import config
 from core.order_state import Event, Role, State, next_state
 from core.payment import parse_dollars
 from models import MenuItem, Order, Topping, User, now_utc
 
 # The restaurant's own clock. Times are saved in UTC; reports use local days.
-LOCAL_TZ = ZoneInfo(os.environ.get("SLICEFLOW_TZ", "America/New_York"))
+LOCAL_TZ = ZoneInfo(config.setting("TZ", "America/New_York"))
 
 VOIDABLE = ["SUBMITTED", "IN_OVEN", "READY"]
 
