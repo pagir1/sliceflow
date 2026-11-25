@@ -1,6 +1,5 @@
 import hashlib
 import hmac
-import os
 import re
 
 import qrcode
@@ -8,11 +7,11 @@ import qrcode.image.svg
 from sqlmodel import Session
 
 import cart
+import config
 import pizza
 from models import Order
 
-# Keep this secret on a real server: set the SLICEFLOW_SECRET environment variable.
-SECRET = os.environ.get("SLICEFLOW_SECRET", "dev-secret-change-me").encode()
+SECRET = config.SECRET.encode()
 
 STAGES = [
     ("SUBMITTED", "Order received"),

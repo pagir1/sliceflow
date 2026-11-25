@@ -5,11 +5,10 @@ from models import Order, OrderLine, MenuItem
 from pizza import SIZE_NAMES, describe
 
 
-def get_or_create_draft(session: Session) -> Order:
-    order = session.exec(
-        select(Order).where(Order.state == "DRAFT").order_by(Order.id.desc())
-    ).first()
-    if order is None:
+def get_or_create_draft(session: Session, draft_id: int | None = None) -> Order:
+    """Continue the given draft, or start a new one. Never picks up another register's draft."""
+    order = session.get(Order, draft_id) if draft_id else None
+    if order is None or order.state != "DRAFT":
         order = Order()
         session.add(order)
         session.commit()

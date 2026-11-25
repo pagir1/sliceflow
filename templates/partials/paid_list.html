@@ -1,0 +1,28 @@
+<div id="paid-list">
+  {% if paid_message %}
+    <div class="mb-3 rounded-xl bg-green-50 text-green-800 px-4 py-3 font-semibold">{{ paid_message }}</div>
+  {% endif %}
+  {% if paid_error %}
+    <div class="mb-3 rounded-xl bg-red-50 text-red-800 px-4 py-3">{{ paid_error }}</div>
+  {% endif %}
+
+  {% for p in paid_unsent %}
+    <div class="flex flex-wrap items-center gap-3 py-3 border-b">
+      <span class="text-2xl font-bold w-16">#{{ p.order.id }}</span>
+      <span class="w-32">{{ p.total | money }} <span class="text-sm text-gray-500">{{ p.order.payment_method | lower }}</span></span>
+      <span class="flex-1 text-sm text-gray-600">
+        {% for l in p.lines %}{{ l.quantity }} x {{ l.name }}{% if l.details %} ({{ l.details }}){% endif %}{% if not loop.last %}, {% endif %}{% endfor %}
+      </span>
+      <button hx-post="/manager/paid/{{ p.order.id }}/send" hx-target="#paid-list" hx-swap="outerHTML"
+              class="min-h-11 px-4 rounded-xl bg-orange-600 text-white font-semibold">Send to kitchen</button>
+      <form hx-post="/manager/paid/{{ p.order.id }}/void" hx-target="#paid-list" hx-swap="outerHTML"
+            class="flex gap-3">
+        <input name="reason" placeholder="Reason for void"
+               class="min-h-11 rounded-xl border border-gray-300 px-3">
+        <button class="min-h-11 px-4 rounded-xl bg-red-600 text-white font-semibold">Void</button>
+      </form>
+    </div>
+  {% else %}
+    <p class="text-gray-400">No paid orders waiting</p>
+  {% endfor %}
+</div>

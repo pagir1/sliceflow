@@ -1,7 +1,12 @@
+import os
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import SQLModel, Session, create_engine
 from sqlmodel.pool import StaticPool
+
+# The app refuses to start without a secret, so set one before it is imported
+os.environ["SLICEFLOW_SECRET"] = "secret-for-tests-only"
 
 import auth
 from models import MenuItem, Topping, User

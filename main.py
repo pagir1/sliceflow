@@ -1,4 +1,3 @@
-import os
 from datetime import date
 
 from fastapi import APIRouter, FastAPI, Request, Depends, HTTPException
@@ -10,6 +9,7 @@ from starlette.middleware.sessions import SessionMiddleware
 import auth
 import cart
 import checkout
+import config
 import display
 import kitchen
 import manager
@@ -27,7 +27,7 @@ seed()
 
 app = FastAPI()
 app.add_middleware(SessionMiddleware,
-                   secret_key=os.environ.get("SLICEFLOW_SECRET", "dev-secret-change-me"),
+                   secret_key=config.SECRET,
                    max_age=12 * 60 * 60)          # stay logged in for one 12-hour shift
 templates = Jinja2Templates(directory="templates")
 templates.env.filters["money"] = lambda cents: f"${cents // 100}.{cents % 100:02d}"
@@ -74,7 +74,8 @@ def require(*roles: str):
     return check
 
 
-cashier_routes = APIRouter(dependencies=[Depends(require("CASHIER", "MANAGER"))])
+CASHIER_ROLES = ("CASHIER", "MANAGER")
+cashier_routes = APIRouter(dependencies=[Depends(require(*CASHIER_ROLES))])
 kitchen_routes = APIRouter(dependencies=[Depends(require("KITCHEN", "MANAGER"))])
 manager_routes = APIRouter(dependencies=[Depends(require("MANAGER"))])
 
@@ -85,8 +86,24 @@ def login_screen(request: Request, session: Session = Depends(get_session)):
                                       {"staff": auth.active_staff(session), "error": "", "chosen": None})
 
 
+def has_paid_unsent_order(request: Request, session: Session) -> bool:
+    """Leaving now would lose an order the customer already paid for."""
+    user = session.get(User, request.session.get("user_id") or 0)
+    if user is None or not user.is_active or user.role not in CASHIER_ROLES:
+        return False                                   # this user could not send it anyway
+    order = session.get(Order, request.session.get("draft_order_id") or 0)
+    return order is not None and order.state == "DRAFT" and order.is_paid
+
+
+def back_to_paid_order(request: Request):
+    request.session["notice"] = "This order is paid. Send it to the kitchen before logging out."
+    return RedirectResponse("/", status_code=303)
+
+
 @app.post("/login", response_class=HTMLResponse)
 async def login(request: Request, session: Session = Depends(get_session)):
+    if has_paid_unsent_order(request, session):        # a new login would replace this session
+        return back_to_paid_order(request)
     form = await request.form()
     try:
         user = auth.attempt_login(session, int(form.get("user_id") or 0), form.get("pin", ""))
@@ -100,7 +117,9 @@ async def login(request: Request, session: Session = Depends(get_session)):
 
 
 @app.post("/logout")
-def logout(request: Request):
+def logout(request: Request, session: Session = Depends(get_session)):
+    if has_paid_unsent_order(request, session):
+        return back_to_paid_order(request)
     request.session.clear()
     return RedirectResponse("/login", status_code=303)
 
@@ -109,9 +128,16 @@ def active_toppings(session: Session) -> list[Topping]:
     return session.exec(select(Topping).where(Topping.is_active).order_by(Topping.id)).all()
 
 
-def ticket_context(session: Session, message: str = "", error: str = "",
+def current_draft(request: Request, session: Session) -> Order:
+    """The draft order of this logged-in register; its id lives in the login session."""
+    order = cart.get_or_create_draft(session, request.session.get("draft_order_id"))
+    request.session["draft_order_id"] = order.id
+    return order
+
+
+def ticket_context(request: Request, session: Session, message: str = "", error: str = "",
                    sent_qr: str = "", sent_url: str = "") -> dict:
-    order = cart.get_or_create_draft(session)
+    order = current_draft(request, session)
     context = cart.ticket(session, order)
     context["cash_options"] = quick_cash_options(context["total"]) if context["lines"] else []
     context["message"] = message
@@ -124,7 +150,7 @@ def ticket_context(session: Session, message: str = "", error: str = "",
 def render_ticket(request: Request, session: Session, message: str = "", error: str = "",
                   sent_qr: str = "", sent_url: str = ""):
     return templates.TemplateResponse(request, "partials/ticket.html",
-                                      ticket_context(session, message, error, sent_qr, sent_url))
+                                      ticket_context(request, session, message, error, sent_qr, sent_url))
 
 
 @cashier_routes.get("/", response_class=HTMLResponse)
@@ -139,7 +165,7 @@ def cashier_screen(request: Request, session: Session = Depends(get_session)):
         "toppings": active_toppings(session),
         "pizza": pizza.build_view("L", []),
         "pickup": kitchen.ready_for_pickup(session),
-        **ticket_context(session),
+        **ticket_context(request, session, error=request.session.pop("notice", "")),
     }
     return templates.TemplateResponse(request, "index.html", context)
 
@@ -158,7 +184,7 @@ async def pizza_preview(request: Request, session: Session = Depends(get_session
 @cashier_routes.post("/cart/add-pizza", response_class=HTMLResponse)
 async def add_pizza_to_cart(request: Request, session: Session = Depends(get_session)):
     form = await request.form()
-    order = cart.get_or_create_draft(session)
+    order = current_draft(request, session)
     try:
         selections = pizza.read_selections(form, active_toppings(session))
         cart.add_pizza(session, order, form.get("size", "L"), selections)
@@ -169,7 +195,7 @@ async def add_pizza_to_cart(request: Request, session: Session = Depends(get_ses
 
 @cashier_routes.post("/cart/add/{item_id}", response_class=HTMLResponse)
 def add_to_cart(item_id: int, request: Request, session: Session = Depends(get_session)):
-    order = cart.get_or_create_draft(session)
+    order = current_draft(request, session)
     try:
         cart.add_menu_item(session, order, item_id)
     except ValueError as e:
@@ -179,7 +205,7 @@ def add_to_cart(item_id: int, request: Request, session: Session = Depends(get_s
 
 @cashier_routes.post("/cart/remove/{line_id}", response_class=HTMLResponse)
 def remove_from_cart(line_id: int, request: Request, session: Session = Depends(get_session)):
-    order = cart.get_or_create_draft(session)
+    order = current_draft(request, session)
     try:
         cart.remove_one(session, order, line_id)
     except ValueError as e:
@@ -189,7 +215,7 @@ def remove_from_cart(line_id: int, request: Request, session: Session = Depends(
 
 @cashier_routes.post("/cart/clear", response_class=HTMLResponse)
 def clear_cart(request: Request, session: Session = Depends(get_session)):
-    order = cart.get_or_create_draft(session)
+    order = current_draft(request, session)
     try:
         cart.clear(session, order)
     except ValueError as e:
@@ -200,7 +226,7 @@ def clear_cart(request: Request, session: Session = Depends(get_session)):
 @cashier_routes.post("/checkout/cash", response_class=HTMLResponse)
 async def pay_with_cash(request: Request, session: Session = Depends(get_session)):
     form = await request.form()
-    order = cart.get_or_create_draft(session)
+    order = current_draft(request, session)
     try:
         if form.get("tendered_cents"):
             tendered = int(form["tendered_cents"])
@@ -214,7 +240,7 @@ async def pay_with_cash(request: Request, session: Session = Depends(get_session
 
 @cashier_routes.post("/checkout/card", response_class=HTMLResponse)
 def pay_with_card(request: Request, session: Session = Depends(get_session)):
-    order = cart.get_or_create_draft(session)
+    order = current_draft(request, session)
     try:
         checkout.pay_card(session, order)
     except ValueError as e:
@@ -224,7 +250,7 @@ def pay_with_card(request: Request, session: Session = Depends(get_session)):
 
 @cashier_routes.post("/order/send", response_class=HTMLResponse)
 def send_order_to_kitchen(request: Request, session: Session = Depends(get_session)):
-    order = cart.get_or_create_draft(session)
+    order = current_draft(request, session)
     try:
         checkout.send_to_kitchen(session, order)
     except TransitionError as e:
@@ -357,6 +383,12 @@ def render_void_list(request: Request, session: Session, message: str = "", erro
     return templates.TemplateResponse(request, "partials/void_list.html", context)
 
 
+def render_paid_list(request: Request, session: Session, message: str = "", error: str = ""):
+    context = {"paid_unsent": manager.paid_unsent_orders(session),
+               "paid_message": message, "paid_error": error}
+    return templates.TemplateResponse(request, "partials/paid_list.html", context)
+
+
 def render_menu_editor(request: Request, session: Session, message: str = "", error: str = ""):
     context = {**manager.menu_for_editing(session), "menu_message": message, "menu_error": error}
     return templates.TemplateResponse(request, "partials/menu_editor.html", context)
@@ -367,6 +399,8 @@ def manager_screen(request: Request, day: str | None = None,
                    session: Session = Depends(get_session)):
     context = {"report": manager.daily_report(session, parse_day(day)),
                "voidable": manager.voidable_orders(session), "message": "", "error": "",
+               "paid_unsent": manager.paid_unsent_orders(session),
+               "paid_message": "", "paid_error": "",
                **manager.menu_for_editing(session), "menu_message": "", "menu_error": ""}
     return templates.TemplateResponse(request, "manager.html", context)
 
@@ -376,6 +410,38 @@ def manager_report(request: Request, day: str | None = None,
                    session: Session = Depends(get_session)):
     return templates.TemplateResponse(request, "partials/report.html",
                                       {"report": manager.daily_report(session, parse_day(day))})
+
+
+@manager_routes.get("/manager/voidable", response_class=HTMLResponse)
+def manager_voidable(request: Request, session: Session = Depends(get_session)):
+    return render_void_list(request, session)
+
+
+@manager_routes.post("/manager/paid/{order_id}/send", response_class=HTMLResponse)
+def manager_send_paid(order_id: int, request: Request, session: Session = Depends(get_session)):
+    try:
+        manager.send_paid_order(session, order_id)
+    except (ValueError, TransitionError) as e:
+        return render_paid_list(request, session, error=str(e))
+    response = render_paid_list(request, session, message=f"Order #{order_id} sent to the kitchen")
+    response.headers["HX-Trigger"] = "report-changed, orders-changed"   # it is an open order now
+    return response
+
+
+@manager_routes.post("/manager/paid/{order_id}/void", response_class=HTMLResponse)
+async def manager_void_paid(order_id: int, request: Request, session: Session = Depends(get_session)):
+    form = await request.form()
+    order = session.get(Order, order_id)
+    try:
+        if order is None or order.state != "DRAFT":        # sent since this page was loaded
+            raise ValueError(f"Order #{order_id} is not waiting to be sent")
+        manager.void_order(session, order_id, form.get("reason", ""), request.state.user)
+    except (ValueError, TransitionError) as e:
+        return render_paid_list(request, session, error=str(e))
+    response = render_paid_list(request, session,
+                                message=f"Order #{order_id} voided. Give the money back.")
+    response.headers["HX-Trigger"] = "report-changed"
+    return response
 
 
 @manager_routes.post("/manager/void/{order_id}", response_class=HTMLResponse)

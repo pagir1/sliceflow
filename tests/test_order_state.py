@@ -55,3 +55,11 @@ def test_final_states_never_change(final_state, event, role):
     # INV-6: Completed and Cancelled are final
     with pytest.raises(TransitionError):
         next_state(final_state, event, role, item_count=5, is_paid=True)
+
+
+def test_only_a_manager_can_void_a_draft_and_only_if_paid():
+    assert next_state(State.DRAFT, Event.VOID, Role.MANAGER, is_paid=True) == State.CANCELLED
+    with pytest.raises(TransitionError):
+        next_state(State.DRAFT, Event.VOID, Role.MANAGER, is_paid=False)
+    with pytest.raises(TransitionError):
+        next_state(State.DRAFT, Event.VOID, Role.CASHIER, is_paid=True)

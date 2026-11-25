@@ -29,6 +29,7 @@ class Role(str, Enum):
 TRANSITIONS = {
     (State.DRAFT, Event.SEND_TO_KITCHEN): (State.SUBMITTED, {Role.CASHIER}),
     (State.DRAFT, Event.CANCEL): (State.CANCELLED, {Role.CASHIER}),
+    (State.DRAFT, Event.VOID): (State.CANCELLED, {Role.MANAGER}),       # only if paid, see guards
     (State.SUBMITTED, Event.START_COOKING): (State.IN_OVEN, {Role.KITCHEN}),
     (State.SUBMITTED, Event.VOID): (State.CANCELLED, {Role.MANAGER}),
     (State.IN_OVEN, Event.MARK_READY): (State.READY, {Role.KITCHEN}),
@@ -59,5 +60,7 @@ def next_state(state: State, event: Event, role: Role,
         raise TransitionError("Cannot send an empty order to the kitchen")
     if event == Event.HAND_OVER and not is_paid:
         raise TransitionError("Order must be paid before it is handed over")
+    if state == State.DRAFT and event == Event.VOID and not is_paid:
+        raise TransitionError("Only a paid draft can be voided")
 
     return new_state

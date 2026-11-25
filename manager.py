@@ -6,9 +6,10 @@ from zoneinfo import ZoneInfo
 from sqlmodel import Session, select
 
 import cart
+import checkout
 from core.order_state import Event, Role, State, next_state
 from core.payment import parse_dollars
-from models import MenuItem, Order, Topping, User
+from models import MenuItem, Order, Topping, User, now_utc
 
 # The restaurant's own clock. Times are saved in UTC; reports use local days.
 LOCAL_TZ = ZoneInfo(os.environ.get("SLICEFLOW_TZ", "America/New_York"))
@@ -68,6 +69,22 @@ def voidable_orders(session: Session) -> list[dict]:
     return [{"order": o, "total": cart.ticket(session, o)["total"]} for o in orders]
 
 
+def paid_unsent_orders(session: Session) -> list[dict]:
+    """Paid drafts. Their register may have lost them (expired login, cleared cookies)."""
+    orders = session.exec(
+        select(Order).where(Order.state == State.DRAFT.value, Order.is_paid).order_by(Order.id)
+    ).all()
+    return [cart.ticket(session, o) for o in orders]
+
+
+def send_paid_order(session: Session, order_id: int) -> Order:
+    order = session.get(Order, order_id)
+    if order is None or order.state != State.DRAFT.value or not order.is_paid:
+        raise ValueError(f"Order #{order_id} is not waiting to be sent")
+    checkout.send_to_kitchen(session, order)
+    return order
+
+
 def void_order(session: Session, order_id: int, reason: str, manager: User) -> Order:
     reason = reason.strip()
     if len(reason) < 3:
@@ -78,6 +95,8 @@ def void_order(session: Session, order_id: int, reason: str, manager: User) -> O
     new_state = next_state(State(order.state), Event.VOID, Role(manager.role),
                            item_count=len(cart.get_lines(session, order)),
                            is_paid=order.is_paid)
+    if order.submitted_at is None:
+        order.submitted_at = now_utc()      # never sent: report the refund on the day it was voided
     order.state = new_state.value
     order.void_reason = reason
     order.voided_by = manager.name
