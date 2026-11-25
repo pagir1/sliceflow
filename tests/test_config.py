@@ -42,11 +42,11 @@ def test_dev_mode_must_really_be_on(env, value):
         config.load_secret()
 
 
-def start_app(tmp_path, **settings):
+def start_app(tmp_path, code="import main", **settings):
     # Import the real app in a new process; tmp_path keeps its database away from ours
-    env = {k: v for k, v in os.environ.items() if not k.startswith("SLICEFLOW_")}
+    env = {k: v for k, v in os.environ.items() if not k.startswith("SLICEFLOW_") and k != "DATABASE_URL"}
     env.update(settings, PYTHONPATH=str(ROOT), PYTHONDONTWRITEBYTECODE="1")
-    return subprocess.run([sys.executable, "-c", "import main"], cwd=tmp_path, env=env,
+    return subprocess.run([sys.executable, "-c", code], cwd=tmp_path, env=env,
                           capture_output=True, text=True, timeout=60)
 
 
@@ -57,7 +57,9 @@ def test_app_refuses_to_start_without_secret(tmp_path):
     assert not (tmp_path / "sliceflow.db").exists()      # stopped before touching the database
 
 
-@pytest.mark.parametrize("settings", [{"SLICEFLOW_DEV": "1"}, {"SLICEFLOW_SECRET": "private"}])
+@pytest.mark.parametrize("settings", [{"SLICEFLOW_DEV": "1"}, {
+    "SLICEFLOW_SECRET": "private", "SLICEFLOW_PIN_CASHIER": "4821",
+    "SLICEFLOW_PIN_KITCHEN": "5932", "SLICEFLOW_PIN_MANAGER": "6043"}])
 def test_app_starts_in_dev_mode_or_with_secret(tmp_path, settings):
     result = start_app(tmp_path, **settings)
     assert result.returncode == 0, result.stderr

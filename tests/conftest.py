@@ -7,6 +7,11 @@ from sqlmodel.pool import StaticPool
 
 # The app refuses to start without a secret, so set one before it is imported
 os.environ["SLICEFLOW_SECRET"] = "secret-for-tests-only"
+# Test production settings, and never touch the real database
+os.environ.pop("SLICEFLOW_DEV", None)
+os.environ["DATABASE_URL"] = "sqlite://"
+for role, pin in [("CASHIER", "4821"), ("KITCHEN", "5932"), ("MANAGER", "6043")]:
+    os.environ[f"SLICEFLOW_PIN_{role}"] = pin
 
 import auth
 from models import MenuItem, Topping, User
@@ -42,5 +47,5 @@ def client(session):
         yield session
 
     app.dependency_overrides[get_session] = use_test_database
-    yield TestClient(app)
+    yield TestClient(app, base_url="https://testserver")     # the login cookie is HTTPS-only
     app.dependency_overrides.clear()

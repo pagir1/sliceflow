@@ -1,6 +1,15 @@
+import os
+
 from sqlmodel import SQLModel, Session, create_engine
 
-DATABASE_URL = "sqlite:///sliceflow.db"
+DEFAULT_DATABASE_URL = "sqlite:///sliceflow.db"
+
+
+def database_url() -> str:
+    return os.environ.get("DATABASE_URL", "").strip() or DEFAULT_DATABASE_URL
+
+
+DATABASE_URL = database_url()
 engine = create_engine(DATABASE_URL)
 
 

@@ -1,6 +1,9 @@
+import os
+
 from sqlmodel import Session, select
 
 import auth
+import config
 from db import engine
 from models import MenuItem, Topping, User
 
@@ -18,12 +21,25 @@ MENU_ITEMS = [
     ("Bottled Water", "drink", 199),
 ]
 
-# Demo staff. Change these PINs before any real use.
+# Demo staff. These PINs are public (they are in the code), so they work only in dev mode.
 STAFF = [
     ("Sita", "CASHIER", "1111"),
     ("Ram", "KITCHEN", "2222"),
     ("Pawan", "MANAGER", "9999"),
 ]
+
+
+def staff_pin(role: str, demo_pin: str) -> str:
+    """The first PIN for this role, from SLICEFLOW_PIN_<role>. Demo PINs only in dev mode."""
+    name = f"SLICEFLOW_PIN_{role}"
+    pin = os.environ.get(name, "").strip()
+    if not pin and config.is_dev_mode():
+        return demo_pin
+    if not auth.is_valid_pin_format(pin):
+        raise RuntimeError(f"{name} must be set to a 4-digit PIN")
+    if not config.is_dev_mode() and pin in {demo for _, _, demo in STAFF}:
+        raise RuntimeError(f"{name} must not be one of the public demo PINs")
+    return pin
 
 
 def seed():
@@ -35,7 +51,8 @@ def seed():
                 session.add(MenuItem(name=name, category=category, price_cents=price))
 
         if session.exec(select(User)).first() is None:
-            for name, role, pin in STAFF:
+            for name, role, demo_pin in STAFF:
+                pin = staff_pin(role, demo_pin)
                 session.add(User(name=name, role=role, pin_hash=auth.hash_pin(pin)))
 
         session.commit()

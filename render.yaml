@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: sliceflow
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips "*"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.5
+      # sync: false means: fill it in on Render, never in this file
+      - key: SLICEFLOW_SECRET
+        sync: false
+      - key: SLICEFLOW_PIN_CASHIER
+        sync: false
+      - key: SLICEFLOW_PIN_KITCHEN
+        sync: false
+      - key: SLICEFLOW_PIN_MANAGER
+        sync: false

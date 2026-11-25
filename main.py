@@ -28,6 +28,7 @@ seed()
 app = FastAPI()
 app.add_middleware(SessionMiddleware,
                    secret_key=config.SECRET,
+                   https_only=not config.is_dev_mode(),
                    max_age=12 * 60 * 60)          # stay logged in for one 12-hour shift
 templates = Jinja2Templates(directory="templates")
 templates.env.filters["money"] = lambda cents: f"${cents // 100}.{cents % 100:02d}"

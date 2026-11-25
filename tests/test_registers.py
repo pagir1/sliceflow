@@ -26,7 +26,7 @@ def registers(client, session):
     # Two cashiers on two registers: each TestClient has its own cookies
     session.add(User(name="Gita", role="CASHIER", pin_hash=auth.hash_pin("3333", rounds=4)))
     session.commit()
-    return login(client), login(TestClient(client.app), 4, "3333")
+    return login(client), login(TestClient(client.app, base_url="https://testserver"), 4, "3333")
 
 
 def lines(session):
@@ -54,7 +54,7 @@ def test_a_register_keeps_its_cart_between_requests(registers, session):
 
 
 def test_same_cashier_on_two_registers_has_two_carts(client):
-    other = login(TestClient(client.app))
+    other = login(TestClient(client.app, base_url="https://testserver"))
     ticket(login(client), "/cart/add/1")
     assert "Coke" not in ticket(other, "/cart/add/2")
 
@@ -150,7 +150,7 @@ def test_unpaid_order_does_not_block_logout(client):
 
 
 def test_paid_order_does_not_block_another_register(paid):
-    other = login(TestClient(paid.app), 3, "9999")
+    other = login(TestClient(paid.app, base_url="https://testserver"), 3, "9999")
     other.post("/logout")
     assert not is_logged_in(other)
 

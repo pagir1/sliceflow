@@ -29,7 +29,7 @@ def boss(client):
 @pytest.fixture
 def register(client):
     # Another browser, where a cashier took the money but did not send the order
-    other = TestClient(client.app)
+    other = TestClient(client.app, base_url="https://testserver")
     other.post("/login", data={"user_id": 1, "pin": "1111"})
     other.post("/cart/add/1")
     other.post("/checkout/card")
